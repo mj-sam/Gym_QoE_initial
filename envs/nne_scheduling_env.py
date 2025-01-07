@@ -99,19 +99,37 @@ PROCESSING_DELAY = 2.0  # 2.0 ms
 MIN_PROC = 0.0
 MAX_PROC = 200.0  # 2.0 * 100 steps = 200.0 ms
 
-# Dataframe column names
-DF_COLUMN_PKT_LOSS_RATE = "pkt_loss_rate"
-DF_COLUMN_RTT_AVG = "rtt_avg"
-# DF_COLUMN_RTT_MEDIAN = "rtt_median"
-# DF_COLUMN_RTT_STD = "rtt_std"
-DF_COLUMN_RTT_Q90 = "throuput_dl"
-DF_COLUMN_RSSI = "throuput_ul"
-DF_COLUMN_RSRQ = "packetsize_dl"
-DF_COLUMN_RSRP = "packetsize_ul"
-DF_COLUMN_UL = "inter_arrival_dl"
-DF_COLUMN_DL = "inter_arrival_ul"
-#DF_COLUMN_LATENCY = "latency"
-DF_COLUMN_JITTER = "inter_arrival_ul"
+# Dataframe column names For OBJECTIVE assessment
+DF_DF_COLUMN_LATENCY = "Latency"
+DF_DF_COLUMN_LATENCY_BINARY = "Latency_binary"
+
+DF_DF_COLUMN_JERKINESS = "Jerkiness"
+DF_DF_COLUMN_JERKINESS_BINARY = "Jerkiness_binary"
+
+DF_DF_COLUMN_SYNC = "Sync"
+DF_DF_COLUMN_SYNC_BINARY = "Sync_binary"
+
+DF_DF_COLUMN_THROUPUT_DL = "throuput_mean_in"
+DF_DF_COLUMN_THROUPUT_UL = "throuput_mean_out"
+DF_DF_COLUMN_PACKETSIZE_DL = "avg_packet_size_in"
+DF_DF_COLUMN_PACKETSIZE_UL = "avg_packet_size_out"
+DF_DF_COLUMN_INTERARRIVALTIME_DL = "inter_arrival_times_avg_in"
+DF_DF_COLUMN_INTERARRIVALTIME_UL = "inter_arrival_times_avg_out"
+
+# Dataframe column names For PHYSIOLOGICAL assessment
+
+# DF_COLUMN_PKT_LOSS_RATE = "pkt_loss_rate"
+# DF_COLUMN_RTT_AVG = "rtt_avg"
+# # DF_COLUMN_RTT_MEDIAN = "rtt_median"
+# # DF_COLUMN_RTT_STD = "rtt_std"
+# DF_COLUMN_RTT_Q90 = "throuput_dl"
+# DF_COLUMN_RSSI = "throuput_ul"
+# DF_COLUMN_RSRQ = "packetsize_dl"
+# DF_COLUMN_RSRP = "packetsize_ul"
+# DF_COLUMN_UL = "inter_arrival_dl"
+# DF_COLUMN_DL = "inter_arrival_ul"
+# #DF_COLUMN_LATENCY = "latency"
+# DF_COLUMN_JITTER = "inter_arrival_ul"
 
 # Defaults for Weights
 LATENCY_WEIGHT = 1.0
