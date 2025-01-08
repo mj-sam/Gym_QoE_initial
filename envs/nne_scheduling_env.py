@@ -311,7 +311,7 @@ class NNESchedulingEnv(gym.Env):
                                                          self.memory_capacity[j]))
             j += 1
 
-        # Keeps track of allocated resources
+        # Keeps track of allocated resources 
         self.allocated_cpu = np.zeros(self.total_number)
         self.allocated_memory = np.zeros(self.total_number)
 
