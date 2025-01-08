@@ -70,7 +70,7 @@ B_CSV = 2
 C_CSV = 3
 D_CSV = 4
 
-SERVER_TYPES = ["A", "B", "C", "D"]
+SERVER_TYPES = ["A", "B"]# "C", "D"]
 SERVER_TYPE = "Config"
 # Defaults
 # Adjusted based on min/max values of dataset
@@ -99,19 +99,45 @@ PROCESSING_DELAY = 2.0  # 2.0 ms
 MIN_PROC = 0.0
 MAX_PROC = 200.0  # 2.0 * 100 steps = 200.0 ms
 
-# Dataframe column names
-DF_COLUMN_PKT_LOSS_RATE = "pkt_loss_rate"
-DF_COLUMN_RTT_AVG = "rtt_avg"
-# DF_COLUMN_RTT_MEDIAN = "rtt_median"
-# DF_COLUMN_RTT_STD = "rtt_std"
-DF_COLUMN_RTT_Q90 = "throuput_dl"
-DF_COLUMN_RSSI = "throuput_ul"
-DF_COLUMN_RSRQ = "packetsize_dl"
-DF_COLUMN_RSRP = "packetsize_ul"
-DF_COLUMN_UL = "inter_arrival_dl"
-DF_COLUMN_DL = "inter_arrival_ul"
-#DF_COLUMN_LATENCY = "latency"
-DF_COLUMN_JITTER = "inter_arrival_ul"
+# Dataframe column names For OBJECTIVE assessment
+DF_COLUMN_LATENCY = "Latency"
+DF_COLUMN_LATENCY_BINARY = "Latency_binary"
+
+DF_COLUMN_JERKINESS = "Jerkiness"
+DF_COLUMN_JERKINESS_BINARY = "Jerkiness_binary"
+
+DF_COLUMN_SYNC = "Sync"
+DF_COLUMN_SYNC_BINARY = "Sync_binary"
+
+DF_COLUMN_THROUPUT_DL = "throuput_mean_in"
+DF_COLUMN_THROUPUT_UL = "throuput_mean_out"
+DF_COLUMN_PACKETSIZE_DL = "avg_packet_size_in"
+DF_COLUMN_PACKETSIZE_UL = "avg_packet_size_out"
+DF_COLUMN_INTERARRIVALTIME_DL = "inter_arrival_times_avg_in"
+DF_COLUMN_INTERARRIVALTIME_UL = "inter_arrival_times_avg_out"
+
+DF_COLUMN_JERKINNESS = "Jerkiness"
+DF_COLUMN_LATENCY = "Latency"
+DF_COLUMN_SYNC = "Sync"
+
+DF_COLUMN_JERKINNESS_BINARY = "Jerkiness_binary"
+DF_COLUMN_LATENCY_BINARY = "Latency_binary"
+DF_COLUMN_SYNC_BINARY = "Sync_binary"
+
+# Dataframe column names For PHYSIOLOGICAL assessment
+
+# DF_COLUMN_PKT_LOSS_RATE = "pkt_loss_rate"
+# DF_COLUMN_RTT_AVG = "rtt_avg"
+# # DF_COLUMN_RTT_MEDIAN = "rtt_median"
+# # DF_COLUMN_RTT_STD = "rtt_std"
+# DF_COLUMN_RTT_Q90 = "throuput_dl"
+# DF_COLUMN_RSSI = "throuput_ul"
+# DF_COLUMN_RSRQ = "packetsize_dl"
+# DF_COLUMN_RSRP = "packetsize_ul"
+# DF_COLUMN_UL = "inter_arrival_dl"
+# DF_COLUMN_DL = "inter_arrival_ul"
+# #DF_COLUMN_LATENCY = "latency"
+# DF_COLUMN_JITTER = "inter_arrival_ul"
 
 # Defaults for Weights
 LATENCY_WEIGHT = 1.0
@@ -165,10 +191,31 @@ class NNESchedulingEnv(gym.Env):
         self.episode_length = episode_length
         self.running_requests: list[DeploymentRequest] = []
 
-        self.avg_rtt = []
-        self.avg_ul = []
-        self.avg_dl = []
-        self.avg_jitter = []
+        # ==========================
+        # -------------------------
+        self.avg_throuput_in = []
+        self.avg_packetsize_in = []
+        self.avg_interarrival_in = []
+        # -------------------------
+        self.avg_throuput_out = []
+        self.avg_packetsize_out = []
+        self.avg_interarrival_out = []
+        # -------------------------
+        self.avg_latency_binary = []
+        self.avg_latency = []
+        # -------------------------
+        self.avg_jerkiness_binary = []
+        self.avg_jerkiness = []
+        # -------------------------
+        self.avg_sync_binary = []
+        self.avg_sync = []
+        # ----------------------
+        # self.avg_rtt = []
+        # self.avg_ul = []
+        # self.avg_dl = []
+        # self.avg_jitter = []
+        # ==========================
+
         self.avg_total_latency = []
         self.avg_processing_latency = []
         self.avg_access_latency = []
@@ -187,11 +234,30 @@ class NNESchedulingEnv(gym.Env):
         self.server_type_id = np.zeros(self.total_number)
 
         # MJ: these are the environment variable
-        self.rtt = np.zeros(self.total_number)
-        self.ul = np.zeros(self.total_number)
-        self.dl = np.zeros(self.total_number)
-        self.jitter = np.zeros(self.total_number)
+        # These are the observational values in the environment: at each step these are getting filled from the simulation
+        self.throuput_in = np.zeros(self.total_number)
+        self.throuput_out = np.zeros(self.total_number)
+        self.packetsize_in = np.zeros(self.total_number)
+        self.packetsize_out = np.zeros(self.total_number)
+        self.interarrival_in = np.zeros(self.total_number)
+        self.interarrival_out = np.zeros(self.total_number)
 
+        # simulation for if have the actual labels : QOE MODEL
+        self.latency_binary = np.zeros(self.total_number)
+        self.jerkiness_binary = np.zeros(self.total_number)
+        self.sync_binary = np.zeros(self.total_number)
+
+        # variable for the actual reported value
+        self.latency_q = np.zeros(self.total_number)
+        self.jerkiness_q = np.zeros(self.total_number)
+        self.sync_q = np.zeros(self.total_number)
+
+        # self.rtt = np.zeros(self.total_number)
+        # self.ul = np.zeros(self.total_number)
+        # self.dl = np.zeros(self.total_number)
+        # self.jitter = np.zeros(self.total_number)
+
+        #
         self.seed = seed
         self.np_random, seed = seeding.np_random(self.seed)
         self.factor = factor
@@ -231,21 +297,21 @@ class NNESchedulingEnv(gym.Env):
         j = 0
         for n in range(num_nodes):
             node_type = int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
-            for i_s in range(NUM_SERVER_TYPE):
-                self.node_id[j] = n
-                self.server_type_id[j] = i_s
-                self.node_type[j] = node_type
-                self.cpu_capacity[j] = DEFAULT_NODE_TYPES[node_type]['cpu']
-                self.memory_capacity[j] = DEFAULT_NODE_TYPES[node_type]['mem']
+            #for i_s in range(NUM_SERVER_TYPE):
+            self.node_id[j] = n
+            #self.server_type_id[j] = i_s
+            self.node_type[j] = node_type
+            self.cpu_capacity[j] = DEFAULT_NODE_TYPES[node_type]['cpu']
+            self.memory_capacity[j] = DEFAULT_NODE_TYPES[node_type]['mem']
 
-                logging.info("[Init] node: {} | server type: {} | Type: {} "
-                                "| cpu: {} | mem: {}".format(n + 1, SERVER_TYPES[i_s],
-                                                            DEFAULT_NODE_TYPES[node_type]['type'],
-                                                            self.cpu_capacity[j],
-                                                            self.memory_capacity[j]))
-                j += 1
+            logging.info("[Init] node: {} | Type: {} "
+                        "| cpu: {} | mem: {}".format(n + 1,
+                                                         DEFAULT_NODE_TYPES[node_type]['type'],
+                                                         self.cpu_capacity[j],
+                                                         self.memory_capacity[j]))
+            j += 1
 
-        # Keeps track of allocated resources
+        # Keeps track of allocated resources 
         self.allocated_cpu = np.zeros(self.total_number)
         self.allocated_memory = np.zeros(self.total_number)
 
@@ -271,51 +337,7 @@ class NNESchedulingEnv(gym.Env):
         self.df_node_selected_rows = []
         self.selected_ts = None
 
-        j = 0
-        file = ""
-        for n in range(num_nodes):
-            # Choose a random CSV file for each node
-            if os.path.exists(self.path_csv_files):
-                file = random.choice(os.listdir(self.path_csv_files))
-                logging.info("[Init] FileName: {}".format(file))
-
-            for i_s in range(NUM_SERVER_TYPE):
-                self.free_cpu[j] = self.cpu_capacity[j] - self.allocated_cpu[j]
-                self.free_memory[j] = self.memory_capacity[j] - self.allocated_memory[j]
-
-                # Update files for each node
-                self.node_csv_data.append(self.path_csv_files + file)
-                self.df_node.append(pd.read_csv(self.node_csv_data[j]))
-
-                id_provider = SERVER_TYPES[i_s]
-
-                ##-----------------------
-                # TODO: Check what this part is doing :
-                ##-----------------------
-                # Select rows based on provider and interface
-                selected_rows = self.df_node[j][(self.df_node[j][SERVER_TYPE] == id_provider)]
-
-                # Reset index of the DataFrame
-                # selected_rows.reset_index(drop=True, inplace=True)
-
-                # print(selected_rows)
-                self.df_node_selected_rows.append(selected_rows)
-
-                # logging.info("[Init] Node: {} | Provider: {} | Interface: {} | size of rows: {}".format(n + 1,
-                #   PROVIDERS[p],INTERFACES[i], len(selected_rows)))
-                
-                # If len(rows) = 0 then provider or interface do not exist
-                if len(selected_rows) == 0:
-                    # logging.info("[Init] Node: {} | Provider: {} | Interface: {}
-                    # do not exist in CSV file".format(n + 1, PROVIDERS[p], INTERFACES[i]))
-                    self.action_valid.append(False)
-                else:
-                    logging.info(
-                        "[Init] Node: {} | SERVER_TYPE: {} "
-                        "exists in CSV file".format(n + 1, SERVER_TYPES[i_s]))
-                    self.action_valid.append(True)
-
-                j += 1
+        self.intialize_node()
 
         # logging.info("[Init] Resources:")
         # logging.info("[Init] CPU Capacity: {}".format(self.cpu_capacity))
@@ -352,6 +374,60 @@ class NNESchedulingEnv(gym.Env):
         self.file_results = file_results_name + ".csv"
         self.obs_csv = self.name + "_obs.csv"
 
+    def intialize_node(self):
+        j = 0
+        file_df = pd.read_csv(self.path_csv_files+'/simulation.csv')
+        for n in range(self.num_nodes):
+            # Choose a random CSV file for each node
+            # if os.path.exists(self.path_csv_files):
+            #     #file = random.choice(os.listdir(self.path_csv_files))
+            #     logging.info("[Init] FileName: {}".format(file))
+            config_random = np.random.choice(SERVER_TYPES)
+            S = file_df[file_df['Config'] == config_random]
+            sampled_df = S.sample(n=1000, random_state=42,replace=True)
+            #for i_s in range(NUM_SERVER_TYPE):
+            #-------------------------------------------------------------------
+            self.free_cpu[j] = self.cpu_capacity[j] - self.allocated_cpu[j]
+            self.free_memory[j] = self.memory_capacity[j] - self.allocated_memory[j]
+
+            # Update files for each node
+            # self.node_csv_data.append(self.path_csv_files + file)
+            self.node_csv_data.append(config_random)
+
+            #self.df_node.append(pd.read_csv(self.node_csv_data[j]))
+            self.df_node.append(sampled_df)
+
+            server_type = config_random
+
+            ##-----------------------
+            # TODO: Check what this part is doing :
+            ##-----------------------
+
+            # Select rows based on server type
+            selected_rows = self.df_node[j][(self.df_node[j][SERVER_TYPE] == server_type)]
+
+            # Reset index of the DataFrame
+            # selected_rows.reset_index(drop=True, inplace=True)
+
+            # print(selected_rows)
+            self.df_node_selected_rows.append(selected_rows)
+
+            # logging.info("[Init] Node: {} | Provider: {} | Interface: {} | size of rows: {}".format(n + 1,
+            #   PROVIDERS[p],INTERFACES[i], len(selected_rows)))
+
+            # If len(rows) = 0 then provider or interface do not exist
+            if len(selected_rows) == 0:
+                # logging.info("[Init] Node: {} | Provider: {} | Interface: {}
+                # do not exist in CSV file".format(n + 1, PROVIDERS[p], INTERFACES[i]))
+                self.action_valid.append(False)
+            else:
+                logging.info(
+                    "[Init] Node: {} "
+                    "exists in CSV file".format(n + 1))
+                self.action_valid.append(True)
+
+            j += 1
+
     # Reset Function
     def reset(self):
         """
@@ -372,10 +448,31 @@ class NNESchedulingEnv(gym.Env):
         self.avg_processing_latency = []
         self.avg_access_latency = []
         self.avg_deployment_cost = []
-        self.avg_rtt = []
-        self.avg_ul = []
-        self.avg_dl = []
-        self.avg_jitter = []
+        #==========================
+        # -------------------------
+        self.avg_throuput_in = []
+        self.avg_packetsize_in = []
+        self.avg_interarrival_in = []
+        # -------------------------
+        self.avg_throuput_out = []
+        self.avg_packetsize_out = []
+        self.avg_interarrival_out = []
+        # -------------------------
+        self.avg_latency_binary = []
+        self.avg_latency = []
+        # -------------------------
+        self.avg_jerkiness_binary = []
+        self.avg_jerkiness = []
+        #-------------------------
+        self.avg_sync_binary = []
+        self.avg_sync = []
+        #----------------------
+        # self.avg_rtt = []
+        # self.avg_ul = []
+        # self.avg_dl = []
+        # self.avg_jitter = []
+        # ==========================
+
         self.total_latency = []
 
         self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
@@ -384,12 +481,29 @@ class NNESchedulingEnv(gym.Env):
         self.deploymentList = get_c2e_deployment_list()
 
         # Metrics for all interfaces
-        self.rtt = np.zeros(self.total_number)
-        self.ul = np.zeros(self.total_number)
-        self.dl = np.zeros(self.total_number)
-        # self.latency = np.zeros(self.total_number)
-        self.jitter = np.zeros(self.total_number)
-        self.processing_latency = np.zeros(self.total_number)
+        # self.rtt = np.zeros(self.total_number)
+        # self.ul = np.zeros(self.total_number)
+        # self.dl = np.zeros(self.total_number)
+        # # self.latency = np.zeros(self.total_number)
+        # self.jitter = np.zeros(self.total_number)
+        # self.processing_latency = np.zeros(self.total_number)
+
+        self.throuput_in = np.zeros(self.total_number)
+        self.throuput_out = np.zeros(self.total_number)
+        self.packetsize_in = np.zeros(self.total_number)
+        self.packetsize_out = np.zeros(self.total_number)
+        self.interarrival_in = np.zeros(self.total_number)
+        self.interarrival_out = np.zeros(self.total_number)
+
+        # simulation for if have the actual labels : QOE MODEL
+        self.latency_binary = np.zeros(self.total_number)
+        self.jerkiness_binary = np.zeros(self.total_number)
+        self.sync_binary = np.zeros(self.total_number)
+
+        # variable for the actual reported value
+        self.latency_q = np.zeros(self.total_number)
+        self.jerkiness_q = np.zeros(self.total_number)
+        self.sync_q = np.zeros(self.total_number)
 
         # New: Resource capacities based on node type
         self.cpu_capacity = np.zeros(self.total_number)
@@ -400,20 +514,19 @@ class NNESchedulingEnv(gym.Env):
         j = 0
         for n in range(self.num_nodes):
             node_type = int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
-        
-            for i_s in range(NUM_SERVER_TYPE):
-                self.node_id[j] = n
-                self.server_type_id[j] = i_s
-                self.node_type[j] = node_type
-                self.cpu_capacity[j] = DEFAULT_NODE_TYPES[node_type]['cpu']
-                self.memory_capacity[j] = DEFAULT_NODE_TYPES[node_type]['mem']
+            # for i_s in range(NUM_SERVER_TYPE):
+            self.node_id[j] = n
+            # self.server_type_id[j] = i_s
+            self.node_type[j] = node_type
+            self.cpu_capacity[j] = DEFAULT_NODE_TYPES[node_type]['cpu']
+            self.memory_capacity[j] = DEFAULT_NODE_TYPES[node_type]['mem']
 
-                logging.info("[Reset] node: {} | Server Type: {} | Type: {} "
-                                "| cpu: {} | mem: {}".format(n + 1, SERVER_TYPES[i_s],
-                                                            DEFAULT_NODE_TYPES[node_type]['type'],
-                                                            self.cpu_capacity[j],
-                                                            self.memory_capacity[j]))
-                j += 1
+            logging.info("[Init] node: {} | Type: {} "
+                         "| cpu: {} | mem: {}".format(n + 1,
+                                                      DEFAULT_NODE_TYPES[node_type]['type'],
+                                                      self.cpu_capacity[j],
+                                                      self.memory_capacity[j]))
+            j += 1
 
         # Keeps track of allocated resources
         self.allocated_cpu = np.zeros(self.total_number)
@@ -443,53 +556,7 @@ class NNESchedulingEnv(gym.Env):
         self.df_node_selected_rows = []
         self.selected_ts = None
 
-        j = 0
-        file = ""
-        for n in range(self.num_nodes):
-            # Choose a random CSV file for each node
-            if os.path.exists(self.path_csv_files):
-                file = random.choice(os.listdir(self.path_csv_files))
-                logging.info("[Reset] FileName: {}".format(file))
-
-            for i_s in range(NUM_SERVER_TYPE):
-                self.free_cpu[j] = self.cpu_capacity[j] - self.allocated_cpu[j]
-                self.free_memory[j] = self.memory_capacity[j] - self.allocated_memory[j]
-
-                # Update files for each node
-                self.node_csv_data.append(self.path_csv_files + file)
-                self.df_node.append(pd.read_csv(self.node_csv_data[j]))
-
-                id_provider = SERVER_TYPES[i_s]
-
-                # Select rows based on provider and interface
-                selected_rows = self.df_node[j][(self.df_node[j][SERVER_TYPE] == id_provider)]
-
-                # Reset index of the DataFrame
-                # selected_rows.reset_index(drop=True, inplace=True)
-
-                # print(selected_rows)
-                self.df_node_selected_rows.append(selected_rows)
-
-                # logging.info("[Init] Node: {} | Provider: {} | Interface: {} | size of rows: {}".format(n + 1,
-                #                                                                                        PROVIDERS[
-                #                                                                                            p],
-                #                                                                                        INTERFACES[
-                #                                                                                           i],
-                #                                                                                        len(selected_rows)))
-
-                # If len(rows) = 0 then provider or interface do not exist
-                if len(selected_rows) == 0:
-                    # logging.info("[Init] Node: {} | Provider: {} | Interface: {}
-                    # do not exist in CSV file".format(n + 1, PROVIDERS[p], INTERFACES[i]))
-                    self.action_valid.append(False)
-                else:
-                    logging.info(
-                        "[Init] Node: {} | Server type: {} "
-                        "exists in CSV file".format(n + 1, SERVER_TYPES[i_s]))
-
-                    self.action_valid.append(True)
-
-                j += 1
+        self.intialize_node()
 
         # Choose a random index to start Episode
         self.get_start_index()
@@ -542,24 +609,50 @@ class NNESchedulingEnv(gym.Env):
         self.block_prob = 1 - (self.accepted_requests / self.offered_requests)
         self.ep_block_prob = 1 - (self.ep_accepted_requests / self.current_step)
 
-        if len(self.avg_access_latency) == 0 and len(self.avg_deployment_cost) == 0 \
-                and len(self.avg_rtt) == 0 and len(self.avg_dl) == 0 and len(self.avg_ul) == 0 \
-                and len(self.avg_jitter) == 0 and len(self.total_latency) == 0 and len(
-            self.avg_processing_latency) == 0:
+        if (len(self.avg_access_latency) == 0 \
+                and len(self.avg_deployment_cost) == 0 \
+
+                and len(self.avg_throuput_in) == 0 \
+                and len(self.avg_packetsize_in) == 0 \
+                and len(self.avg_interarrival_in) == 0 \
+                and len(self.avg_throuput_out) == 0 \
+                and len(self.avg_packetsize_out) == 0 \
+                and len(self.avg_interarrival_out) == 0 \
+
+                and len(self.avg_latency_binary) == 0 \
+                and len(self.avg_jerkiness_binary) == 0 \
+                and len(self.avg_sync_binary) == 0 \
+ \
+                and len(self.total_latency) == 0 \
+                and len(self.avg_processing_latency) == 0):
             avg_c = 1
-            avg_rtt = 1
-            avg_dl = 1
-            avg_ul = 1
-            avg_jitter = 1
+            #-------------------
+            avg_throuput_in = 1
+            avg_packetsize_in = 1
+            avg_interarrival_in = 1
+            avg_throuput_out = 1
+            avg_packetsize_out = 1
+            avg_interarrival_out = 1
+            avg_latency_binary = 1
+            avg_jerkiness_binary = 1
+            avg_sync_binary = 1
+            #----------------
             avg_l = 1
             total_latency = 1
             avg_proc = 1
         else:
             avg_c = mean(self.avg_deployment_cost)
-            avg_rtt = mean(self.avg_rtt)
-            avg_dl = mean(self.avg_dl)
-            avg_ul = mean(self.avg_ul)
-            avg_jitter = mean(self.avg_jitter)
+            #-------------------------------------
+            avg_throuput_in = mean(self.avg_throuput_in)
+            avg_packetsize_in = mean(self.avg_packetsize_in)
+            avg_interarrival_in = mean(self.avg_interarrival_in)
+            avg_throuput_out = mean(self.avg_throuput_out)
+            avg_packetsize_out = mean(self.avg_packetsize_out)
+            avg_interarrival_out = mean(self.avg_interarrival_out)
+            avg_latency_binary = mean(self.avg_latency_binary)
+            avg_jerkiness_binary = mean(self.avg_jerkiness_binary)
+            avg_sync_binary = mean(self.avg_sync_binary)
+            #------------------------------------------
             avg_l = mean(self.avg_access_latency)
             total_latency = mean(self.avg_total_latency)
             avg_proc = mean(self.avg_processing_latency)
@@ -574,10 +667,17 @@ class NNESchedulingEnv(gym.Env):
             'avg_total_latency': float("{:.2f}".format(total_latency)),
             'avg_access_latency': float("{:.2f}".format(avg_l)),
             'avg_processing_latency': float("{:.2f}".format(avg_proc)),
-            'avg_rtt': float("{:.2f}".format(avg_rtt)),
-            'avg_dl': float("{:.2f}".format(avg_dl)),
-            'avg_ul': float("{:.2f}".format(avg_ul)),
-            'avg_jitter': float("{:.2f}".format(avg_jitter)),
+            #----------------
+            'avg_throuput_in': float("{:.2f}".format(avg_throuput_in)),
+            'avg_packetsize_in': float("{:.2f}".format(avg_packetsize_in)),
+            'avg_interarrival_in': float("{:.2f}".format(avg_interarrival_in)),
+            'avg_throuput_out': float("{:.2f}".format(avg_throuput_out)),
+            'avg_packetsize_out': float("{:.2f}".format(avg_packetsize_out)),
+            'avg_interarrival_out': float("{:.2f}".format(avg_interarrival_out)),
+            'avg_latency_binary': float("{:.2f}".format(avg_latency_binary)),
+            'avg_jerkiness_binary': float("{:.2f}".format(avg_jerkiness_binary)),
+            'avg_sync_binary': float("{:.2f}".format(avg_sync_binary)),
+            #--------------------------------
             'gini': float("{:.2f}".format(calculate_gini_coefficient(self.avg_load_served_per_provider))),
             # 'telia_requests': float("{:.2f}".format(self.avg_load_served_per_provider[TELIA])),
             # 'telenor_requests': float("{:.2f}".format(self.avg_load_served_per_provider[TELENOR])),
@@ -600,10 +700,18 @@ class NNESchedulingEnv(gym.Env):
                         mean(self.avg_total_latency),
                         mean(self.avg_access_latency),
                         mean(self.avg_processing_latency),
-                        mean(self.avg_rtt),
-                        mean(self.avg_dl),
-                        mean(self.avg_ul),
-                        mean(self.avg_jitter),
+                        #--------------------------
+                        mean(self.avg_throuput_in),
+                        mean(self.avg_packetsize_in),
+                        mean(self.avg_interarrival_in),
+                        mean(self.avg_throuput_out),
+                        mean(self.avg_packetsize_out),
+                        mean(self.avg_interarrival_out),
+                        mean(self.avg_latency_binary),
+                        mean(self.avg_jerkiness_binary),
+                        mean(self.avg_sync_binary),
+                        # --------------------------
+
                         gini,
                         # self.avg_load_served_per_provider[TELIA],
                         # self.avg_load_served_per_provider[TELENOR],
@@ -641,7 +749,8 @@ class NNESchedulingEnv(gym.Env):
                     return 1
             else:  # Multi-objective reward function: latency + cost + gini + bandwidth
                 # Latency
-                latency = self.deployment_request.expected_rtt + self.deployment_request.expected_access_latency + self.deployment_request.expected_processing_latency
+                #latency = self.deployment_request.expected_rtt + self.deployment_request.expected_access_latency + self.deployment_request.expected_processing_latency
+                latency = self.deployment_request.expected_access_latency + self.deployment_request.expected_processing_latency
                 logging.info('[Multi Reward] Latency components: RTT: {} | Lat: {} | Processing: {}'.format(
                     self.deployment_request.expected_rtt,
                     self.deployment_request.expected_access_latency,
@@ -723,26 +832,48 @@ class NNESchedulingEnv(gym.Env):
                 self.deployment_request.action_id = action
                 self.deployment_request.deployed_provider = self.server_type_id[action]
 
-                # self.deployment_request.expected_rtt = self.rtt[action]
-                # self.deployment_request.expected_ul_bandwidth = self.ul[action]
-                # self.deployment_request.expected_dl_bandwidth = self.dl[action]
-                # self.deployment_request.expected_jitter = self.jitter[action]
-
                 self.avg_deployment_cost.append(DEFAULT_NODE_TYPES[type_id]['cost'])
+
+                # WE DONT NEED TO INCLUD RTT HERE AGAIN
+                # self.avg_total_latency.append( DEFAULT_NODE_TYPES[type_id]['latency'] + self.processing_latency[action] + self.rtt[action])
+
                 self.avg_total_latency.append(
-                    DEFAULT_NODE_TYPES[type_id]['latency'] + self.processing_latency[action] + self.rtt[action])
+                    DEFAULT_NODE_TYPES[type_id]['latency'] + self.processing_latency[action])# + self.rtt[action])
 
                 self.avg_access_latency.append(DEFAULT_NODE_TYPES[type_id]['latency'])
-                self.avg_processing_latency.append(self.processing_latency[action])
+                self.avg_processing_latency.append( self.processing_latency[action])
 
-                self.avg_rtt.append(self.rtt[action])
-                self.avg_ul.append(self.ul[action])
-                self.avg_dl.append(self.dl[action])
-                self.avg_jitter.append(self.jitter[action])
+                #self.avg_rtt.append(self.rtt[action])
+                #self.avg_ul.append(self.ul[action])
+                #self.avg_dl.append(self.dl[action])
+                #self.avg_jitter.append(self.jitter[action])
 
-                self.deployment_request.expected_dl_bandwidth = self.dl[action]
-                self.deployment_request.expected_ul_bandwidth = self.ul[action]
-                self.deployment_request.expected_rtt = self.rtt[action]
+                self.avg_throuput_in.append(self.throuput_in[action])
+                self.avg_packetsize_in.append(self.packetsize_in[action])
+                self.avg_interarrival_in.append(self.interarrival_in[action])
+                # -------------------------
+                self.avg_throuput_out.append(self.throuput_out[action])
+                self.avg_packetsize_out.append(self.packetsize_out[action])
+                self.avg_interarrival_out.append(self.interarrival_out[action])
+                # -------------------------
+                self.avg_latency_binary.append(self.latency_binary[action])
+                self.avg_jerkiness_binary.append(self.jerkiness_binary[action])
+                self.avg_sync_binary.append(self.sync_binary[action])
+
+                #---------------------------
+                #self.avg_latency.append()
+                # --------------------------
+                #self.avg_jerkiness.append()
+                # --------------------------
+                #self.avg_sync.append()
+                #---------------------------
+
+                #self.deployment_request.expected_dl_bandwidth = self.dl[action]
+                #self.deployment_request.expected_ul_bandwidth = self.ul[action]
+                #self.deployment_request.expected_rtt = self.rtt[action]
+
+
+                # WE ONLY KEEP THE ACCESS LATENCY
                 self.deployment_request.expected_access_latency = DEFAULT_NODE_TYPES[type_id]['latency']
                 self.deployment_request.expected_cost = DEFAULT_NODE_TYPES[type_id]['cost']
                 self.deployment_request.expected_processing_latency = self.processing_latency[action]
@@ -780,12 +911,21 @@ class NNESchedulingEnv(gym.Env):
                                 self.allocated_memory,
                                 self.memory_capacity,
                                 self.server_type_id,
-                                self.rtt,
+                                self.throuput_in,
+                                self.throuput_out,
+                                self.packetsize_in,
+                                self.packetsize_out,
+                                self.interarrival_in,
+                                self.interarrival_out,
+                                #self.rtt,
                                 # self.latency,
-                                self.ul,
-                                self.dl,
-                                self.jitter,
+                                #self.ul,
+                                #self.dl,
+                                #self.jitter,
                                 self.processing_latency,
+                                self.latency_binary,
+                                self.jerkiness_binary,
+                                self.sync_binary
                                 ],
                                axis=1)
 
@@ -1024,29 +1164,66 @@ class NNESchedulingEnv(gym.Env):
         for n in range(self.num_nodes):
             for i_s in range(NUM_SERVER_TYPE):
                 if self.action_valid[j]:
+                    self.throuput_in = self.df_node_selected_rows[j].at[step, DF_COLUMN_THROUPUT_DL]
+                    self.throuput_out = self.df_node_selected_rows[j].at[step, DF_COLUMN_THROUPUT_UL]
+                    self.packetsize_in = self.df_node_selected_rows[j].at[step, DF_COLUMN_PACKETSIZE_DL]
+                    self.packetsize_out = self.df_node_selected_rows[j].at[step, DF_COLUMN_PACKETSIZE_UL]
+                    self.interarrival_in = self.df_node_selected_rows[j].at[step, DF_COLUMN_INTERARRIVALTIME_DL]
+                    self.interarrival_out = self.df_node_selected_rows[j].at[step, DF_COLUMN_INTERARRIVALTIME_UL]
+
+                    # simulation for if have the actual labels : QOE MODEL
+                    self.latency_binary = self.df_node_selected_rows[j].at[step, DF_COLUMN_LATENCY_BINARY]
+                    self.jerkiness_binary = self.df_node_selected_rows[j].at[step, DF_COLUMN_JERKINESS_BINARY]
+                    self.sync_binary = self.df_node_selected_rows[j].at[step, DF_COLUMN_SYNC_BINARY]
+
+                    # variable for the actual reported value
+                    self.latency_q = self.df_node_selected_rows[j].at[step, DF_COLUMN_LATENCY]
+                    self.jerkiness_q = self.df_node_selected_rows[j].at[step, DF_COLUMN_JERKINESS]
+                    self.sync_q = self.df_node_selected_rows[j].at[step, DF_COLUMN_SYNC]
+
                     # Update values
-                    self.rtt[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_RTT_Q90]
-                    self.ul[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_UL]
-                    self.dl[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_DL]
+                    # self.rtt[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_RTT_Q90]
+                    # self.ul[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_UL]
+                    # self.dl[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_DL]
                     # self.latency[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_LATENCY]
-                    self.jitter[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_JITTER]
+                    # self.jitter[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_JITTER]
 
                     logging.info("[update_network_values] Node: {} | Server type: {} |"
-                                    "RTT Q90: {} | UL: {} | DL: {} | Jitter: {}".format(n + 1,
-                                                                                        SERVER_TYPES[i_s],
-                                                                                        self.rtt[j],
-                                                                                        self.ul[j],
-                                                                                        self.dl[j],
-                                                                                        # self.latency[j],
-                                                                                        self.jitter[j])
+                                "Throuput IN: {} | Throuput OUT: {} | Packetsize IN: {} |"
+                                "Packetsize OUT: {} | Interarrival IN: {} | Interarrival OUT: {} | "
+                                "Latency Binary: {} | Jerkiness Binary: {} | Sync Binary: {} | "
+                                "Latency: {} | Jerkiness: {} | Sync: {} |".format(n + 1,
+                                                                                    SERVER_TYPES[i_s],
+                                                                                    self.throuput_in[j],
+                                                                                    self.throuput_out[j],
+                                                                                    self.packetsize_in[j],
+                                                                                    self.packetsize_out[j],
+                                                                                    self.interarrival_in[j],
+                                                                                    self.interarrival_out[j],
+                                                                                    self.latency_binary[j],
+                                                                                    self.jerkiness_binary[j],
+                                                                                    self.sync_binary[j],
+                                                                                    self.latency_q[j],
+                                                                                    self.jerkiness_q[j],
+                                                                                    self.sync_q[j])
                                     )
                 else:
-                    # Fill all values as -1
-                    self.rtt[j] = -1
-                    self.ul[j] = -1
-                    self.dl[j] = -1
-                    # self.latency[j] = -1
-                    self.jitter[j] = -1
+                    self.throuput_in = -1
+                    self.throuput_out = -1
+                    self.packetsize_in = -1
+                    self.packetsize_out = -1
+                    self.interarrival_in = -1
+                    self.interarrival_out = -1
+
+                    # simulation for if have the actual labels : QOE MODEL
+                    self.latency_binary = -1
+                    self.jerkiness_binary = -1
+                    self.sync_binary = -1
+
+                    # variable for the actual reported value
+                    self.latency_q = -1
+                    self.jerkiness_q = -1
+                    self.sync_q = -1
 
                 j += 1
         return
