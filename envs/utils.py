@@ -1,4 +1,5 @@
 import csv
+import os
 from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
@@ -181,42 +182,80 @@ def save_obs_to_csv(file_name, timestamp, num_pods, desired_replicas, cpu_usage,
         )
 '''
 
-def save_to_csv(file_name, episode, reward, ep_block_prob, ep_accepted_requests,
-                avg_deployment_cost, avg_total_latency,
-                avg_access_latency, avg_proc_latency,
-                avg_throuput_in, avg_packetsize_in, avg_interarrival_in, avg_throuput_out, avg_packetsize_out, avg_interarrival_out,
-                avg_latency_binary, avg_jerkiness_binary, avg_sync_binary,
-                gini, #telia_requests, telenor_requests, ice_requests,
-                execution_time):
-    file = open(file_name, 'a+', newline='')  # append
-    # file = open(file_name, 'w', newline='')
-    with file:
-        fields = ['episode', 'reward', 'ep_block_prob', 'ep_accepted_requests', 'avg_deployment_cost',
-                  'avg_total_latency', 'avg_access_latency', 'avg_proc_latency',
-                  'avg_rtt', 'avg_dl', 'avg_ul', 'avg_jitter', 'gini', 'telia_requests', 'telenor_requests',
-                  'ice_requests', 'execution_time']
-        writer = csv.DictWriter(file, fieldnames=fields)
-        # writer.writeheader()
-        writer.writerow(
-            {'episode': episode,
-             'reward': float("{:.2f}".format(reward)),
-             'ep_block_prob': float("{:.2f}".format(ep_block_prob)),
-             'ep_accepted_requests': float("{:.2f}".format(ep_accepted_requests)),
-             'avg_deployment_cost': float("{:.2f}".format(avg_deployment_cost)),
-             'avg_total_latency': float("{:.2f}".format(avg_total_latency)),
-             'avg_access_latency': float("{:.2f}".format(avg_access_latency)),
-             'avg_proc_latency': float("{:.2f}".format(avg_proc_latency)),
-             # 'avg_rtt': float("{:.2f}".format(avg_rtt)),
-             # 'avg_dl': float("{:.2f}".format(avg_dl)),
-             # 'avg_ul': float("{:.2f}".format(avg_ul)),
-             # 'avg_jitter': float("{:.2f}".format(avg_jitter)),
-             'gini': float("{:.2f}".format(gini)),
-             #'telia_requests': telia_requests,
-             #'telenor_requests': telenor_requests,
-             #'ice_requests': ice_requests,
-             'execution_time': float("{:.2f}".format(execution_time))}
-        )
+# def save_to_csv(file_name, episode,
+#                 reward, ep_block_prob,
+#                 ep_accepted_requests,
+#                 avg_deployment_cost, avg_total_latency,
+#                 avg_access_latency, avg_proc_latency,
+#                 avg_throuput_in, avg_packetsize_in, avg_interarrival_in,
+#                 avg_throuput_out, avg_packetsize_out, avg_interarrival_out,
+#                 avg_latency_binary, avg_jerkiness_binary, avg_sync_binary,
+#                 avg_qoe,
+#                 gini,
+#                 execution_time):
+#     file = open(file_name, 'a+', newline='')  # append
+#     # file = open(file_name, 'w', newline='')
+#     with file:
+#         fields = ['episode', 'reward', 'ep_block_prob', 'ep_accepted_requests', 'avg_deployment_cost',
+#                   'avg_total_latency', 'avg_access_latency', 'avg_proc_latency',
+#                   'avg_throuput_in', 'avg_packetsize_in', 'avg_interarrival_in', 'avg_throuput_out','avg_packetsize_out','avg_interarrival_out','avg_qoe','gini',
+#                   'execution_time']
+#         writer = csv.DictWriter(file, fieldnames=fields)
+#         # writer.writeheader()
+#         writer.writerow(
+#             {
+#                 'episode': episode,
+#                 'reward': float("{:.2f}".format(reward)),
+#                 'ep_block_prob': float("{:.2f}".format(ep_block_prob)),
+#                 'ep_accepted_requests': float("{:.2f}".format(ep_accepted_requests)),
+#                 'avg_deployment_cost': float("{:.2f}".format(avg_deployment_cost)),
+#                 'avg_total_latency': float("{:.2f}".format(avg_total_latency)),
+#                 'avg_access_latency': float("{:.2f}".format(avg_access_latency)),
+#                 'avg_proc_latency': float("{:.2f}".format(avg_proc_latency)),
+#                 'avg_throuput_in': float("{:.2f}".format(avg_throuput_in)),
+#                 'avg_packetsize_in': float("{:.2f}".format(avg_packetsize_in)),
+#                 'avg_interarrival_in': float("{:.2f}".format(avg_interarrival_in)),
+#                 'avg_throuput_out': float("{:.2f}".format(avg_throuput_out)),
+#                 'avg_packetsize_out': float("{:.2f}".format(avg_packetsize_out)),
+#                 'avg_interarrival_out': float("{:.2f}".format(avg_interarrival_out)),
+#                 'avg_qoe':float("{:.2f}".format(avg_qoe)),
+#                 'gini': float("{:.2f}".format(gini)),
+#                 'execution_time': float("{:.2f}".format(execution_time))
+#              }
+#         )
 
+
+def save_to_csv(file_name, data):
+    """
+    Save data to a CSV file.
+
+    Args:
+        file_name (str): Name of the CSV file.
+        data (dict): Data to be written to the CSV file as key-value pairs.
+    """
+    fields = [
+        'episode', 'reward', 'ep_block_prob', 'ep_accepted_requests',
+        'avg_deployment_cost', 'avg_total_latency', 'avg_access_latency',
+        'avg_proc_latency', 'avg_throuput_in', 'avg_packetsize_in',
+        'avg_interarrival_in', 'avg_throuput_out', 'avg_packetsize_out',
+        'avg_interarrival_out', 'avg_latency_binary', 'avg_jerkiness_binary',
+        'avg_sync_binary', 'avg_qoe', 'gini', 'execution_time'
+    ]
+
+    # Check if file exists to determine if headers need to be written
+    file_exists = os.path.exists(file_name)
+
+    try:
+        with open(file_name, 'a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=fields)
+            if not file_exists:
+                writer.writeheader()
+            # Ensure values are formatted to 2 decimal places
+            formatted_data = {key: round(value, 2) if isinstance(value, (float, int)) else value for key, value in
+                              data.items()}
+            writer.writerow(formatted_data)
+    except IOError as e:
+        print(f"Error writing to file {file_name}: {e}")
 
 # Calculation of Gini Coefficient
 # 0 is better - 1 is worse!

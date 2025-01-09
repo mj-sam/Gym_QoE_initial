@@ -10,7 +10,7 @@ columns_values = {}
 if __name__ == "__main__":
     # Check all csv files in the directory and keep track of min and max in all columns
     # We will use this to normalize the data
-    path_csv_files = "data/train/v2-nov-dec/nodes/"
+    path_csv_files = "./mydata/"
 
     # For each CSV file
     for filename in os.listdir(path_csv_files):

@@ -140,7 +140,6 @@ FACTOR = 1.0
 SEED = 42
 PATH_CSV_FILES = "./mydata/"
 
-
 # Adjusted parameter for GYM_QoE
 MIN_SIZE = 72
 
@@ -194,13 +193,13 @@ class NNESchedulingEnv(gym.Env):
         self.avg_interarrival_out = []
         # -------------------------
         self.avg_latency_binary = []
-        self.avg_latency = []
+        self.avg_latency_q = []
         # -------------------------
         self.avg_jerkiness_binary = []
-        self.avg_jerkiness = []
+        self.avg_jerkiness_q = []
         # -------------------------
         self.avg_sync_binary = []
-        self.avg_sync = []
+        self.avg_sync_q = []
         # ----------------------
         # self.avg_rtt = []
         # self.avg_ul = []
@@ -215,12 +214,7 @@ class NNESchedulingEnv(gym.Env):
         self.avg_deployment_cost = []
 
         self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
-        
 
-        # Metrics for different providers/interfaces
-        # Telia - 1
-        # Telenor - 2
-        # Ice - 3
         self.processing_latency = np.zeros(self.total_number)
         self.node_id = np.zeros(self.total_number)
         self.server_type_id = np.zeros(self.total_number)
@@ -331,14 +325,6 @@ class NNESchedulingEnv(gym.Env):
 
         self.intialize_node()
 
-        # logging.info("[Init] Resources:")
-        # logging.info("[Init] CPU Capacity: {}".format(self.cpu_capacity))
-        # logging.info("[Init] MEM Capacity: {}".format(self.memory_capacity))
-        # logging.info("[Init] CPU allocated: {}".format(self.allocated_cpu))
-        # logging.info("[Init] MEM allocated: {}".format(self.allocated_memory))
-        # logging.info("[Init] CPU free: {}".format(self.free_cpu))
-        # logging.info("[Init] MEM free: {}".format(self.free_memory))
-
         # Choose a random timestamp to start Episode
         self.get_start_index()
 
@@ -368,7 +354,7 @@ class NNESchedulingEnv(gym.Env):
 
     def intialize_node(self):
         j = 0
-        file_df = pd.read_csv(self.path_csv_files+'/simulation.csv')
+        file_df = pd.read_csv("./mydata/simulation.csv")
         for n in range(self.num_nodes):
             # Choose a random CSV file for each node
             # if os.path.exists(self.path_csv_files):
@@ -440,7 +426,6 @@ class NNESchedulingEnv(gym.Env):
         self.avg_processing_latency = []
         self.avg_access_latency = []
         self.avg_deployment_cost = []
-        #==========================
         # -------------------------
         self.avg_throuput_in = []
         self.avg_packetsize_in = []
@@ -451,20 +436,18 @@ class NNESchedulingEnv(gym.Env):
         self.avg_interarrival_out = []
         # -------------------------
         self.avg_latency_binary = []
-        self.avg_latency = []
+        self.avg_latency_q = []
         # -------------------------
         self.avg_jerkiness_binary = []
-        self.avg_jerkiness = []
+        self.avg_jerkiness_q = []
         #-------------------------
         self.avg_sync_binary = []
-        self.avg_sync = []
+        self.avg_sync_q = []
         #----------------------
         # self.avg_rtt = []
         # self.avg_ul = []
         # self.avg_dl = []
         # self.avg_jitter = []
-        # ==========================
-
         self.total_latency = []
 
         self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
@@ -614,7 +597,6 @@ class NNESchedulingEnv(gym.Env):
                 and len(self.avg_latency_binary) == 0 \
                 and len(self.avg_jerkiness_binary) == 0 \
                 and len(self.avg_sync_binary) == 0 \
- \
                 and len(self.total_latency) == 0 \
                 and len(self.avg_processing_latency) == 0):
             avg_c = 1
@@ -628,6 +610,9 @@ class NNESchedulingEnv(gym.Env):
             avg_latency_binary = 1
             avg_jerkiness_binary = 1
             avg_sync_binary = 1
+            avg_sync_q = 1
+            avg_latency_q = 1
+            avg_jerkiness_q = 1
             #----------------
             avg_l = 1
             total_latency = 1
@@ -644,6 +629,9 @@ class NNESchedulingEnv(gym.Env):
             avg_latency_binary = mean(self.avg_latency_binary)
             avg_jerkiness_binary = mean(self.avg_jerkiness_binary)
             avg_sync_binary = mean(self.avg_sync_binary)
+            avg_latency_q = mean(self.avg_latency_q)
+            avg_jerkiness_q = mean(self.avg_jerkiness_q)
+            avg_sync_q = mean(self.avg_sync_q)
             #------------------------------------------
             avg_l = mean(self.avg_access_latency)
             total_latency = mean(self.avg_total_latency)
@@ -671,9 +659,6 @@ class NNESchedulingEnv(gym.Env):
             'avg_sync_binary': float("{:.2f}".format(avg_sync_binary)),
             #--------------------------------
             'gini': float("{:.2f}".format(calculate_gini_coefficient(self.avg_load_served_per_provider))),
-            # 'telia_requests': float("{:.2f}".format(self.avg_load_served_per_provider[TELIA])),
-            # 'telenor_requests': float("{:.2f}".format(self.avg_load_served_per_provider[TELENOR])),
-            # 'ice_requests': float("{:.2f}".format(self.avg_load_served_per_provider[ICE])),
             'executionTime': float("{:.2f}".format(self.execution_time))
         }
 
@@ -685,29 +670,35 @@ class NNESchedulingEnv(gym.Env):
             gini = calculate_gini_coefficient(self.avg_load_served_per_provider)
 
             logging.info("[Step] Episode finished, saving results to csv...")
-            save_to_csv(self.file_results, self.episode_count,
-                        self.total_reward, self.ep_block_prob,
-                        self.ep_accepted_requests,
-                        mean(self.avg_deployment_cost),
-                        mean(self.avg_total_latency),
-                        mean(self.avg_access_latency),
-                        mean(self.avg_processing_latency),
-                        #--------------------------
-                        mean(self.avg_throuput_in),
-                        mean(self.avg_packetsize_in),
-                        mean(self.avg_interarrival_in),
-                        mean(self.avg_throuput_out),
-                        mean(self.avg_packetsize_out),
-                        mean(self.avg_interarrival_out),
-                        mean(self.avg_latency_binary),
-                        mean(self.avg_jerkiness_binary),
-                        mean(self.avg_sync_binary),
-                        # --------------------------
-                        gini,
-                        # self.avg_load_served_per_provider[TELIA],
-                        # self.avg_load_served_per_provider[TELENOR],
-                        # self.avg_load_served_per_provider[ICE],
-                        self.execution_time)
+            qoe = ( avg_sync_q + avg_latency_q + avg_jerkiness_q) / 3.0
+            #print(qoe)
+
+            # Prepare data dictionary
+            data = {
+                'episode': self.episode_count,
+                'reward': round(self.total_reward, 2),
+                'ep_block_prob': round(self.ep_block_prob, 2),
+                'ep_accepted_requests': round(self.ep_accepted_requests, 2),
+                'avg_deployment_cost': round(mean(self.avg_deployment_cost), 2),
+                'avg_total_latency': round(mean(self.avg_total_latency), 2),
+                'avg_access_latency': round(mean(self.avg_access_latency), 2),
+                'avg_proc_latency': round(mean(self.avg_processing_latency), 2),
+                # --------------------------
+                'avg_throuput_in': round(mean(self.avg_throuput_in), 2),
+                'avg_packetsize_in': round(mean(self.avg_packetsize_in), 2),
+                'avg_interarrival_in': round(mean(self.avg_interarrival_in), 2),
+                'avg_throuput_out': round(mean(self.avg_throuput_out), 2),
+                'avg_packetsize_out': round(mean(self.avg_packetsize_out), 2),
+                'avg_interarrival_out': round(mean(self.avg_interarrival_out), 2),
+                'avg_latency_binary': round(mean(self.avg_latency_binary), 2),
+                'avg_jerkiness_binary': round(mean(self.avg_jerkiness_binary), 2),
+                'avg_sync_binary': round(mean(self.avg_sync_binary), 2),
+                'avg_qoe': round(qoe, 2),
+                'gini': round(gini, 2),
+                'execution_time': round(self.execution_time, 2)
+            }
+
+            save_to_csv(self.file_results, data)
 
         # return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, self.info
@@ -751,21 +742,25 @@ class NNESchedulingEnv(gym.Env):
                 # Cost
                 cost = self.deployment_request.expected_cost
                 # Bandwidth
-                #bandwidth = self.deployment_request.expected_dl_bandwidth + self.deployment_request.expected_ul_bandwidth
+                qoe = (self.deployment_request.sync_q + self.deployment_request.latency_q + self.deployment_request.jerkiness_q) / 3.0
 
+                #bandwidth = self.deployment_request.expected_dl_bandwidth + self.deployment_request.expected_ul_bandwidth
+                #latency_q = self.late
                 #==============================================
                 #TODO : Add QoE here
                 #==========================================
                 logging.info(
-                    '[Multi Reward] latency: {} | gini: {} | cost: {} '.format(latency, gini, cost))
+                    '[Multi Reward] latency: {} | gini: {} | cost: {} | Latency: | '.format(latency, gini, cost))
 
                 latency = normalize(latency, MIN_RTT + MIN_LATENCY + MIN_PROC, MAX_RTT + MAX_LATENCY + MAX_PROC)
                 cost = normalize(cost, MIN_COST, MAX_COST)
                 #bandwidth = normalize(bandwidth, MIN_DL + MIN_UL, MAX_DL + MAX_UL)
+                qoe = normalize(cost, 0, 5)
 
-                reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (
-                        1 - cost)# + self.bandwidth_weight * bandwidth
-
+                #reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (
+                        #1 - cost) + self.bandwidth_weight * qoe
+                reward = 1 - cost
+                #reward = qoe
                 logging.info(
                     '[Multi Reward] Normalized: latency: {} | gini: {} | cost: {} | '.format(latency, gini,
                                                                                                           cost))
@@ -849,11 +844,9 @@ class NNESchedulingEnv(gym.Env):
                 self.avg_sync_binary.append(self.sync_binary[action])
 
                 #---------------------------
-                #self.avg_latency.append()
-                # --------------------------
-                #self.avg_jerkiness.append()
-                # --------------------------
-                #self.avg_sync.append()
+                self.avg_latency_q.append(self.latency_q[action])
+                self.avg_jerkiness_q.append(self.jerkiness_q[action])
+                self.avg_sync_q.append(self.sync_q[action])
                 #---------------------------
 
                 #self.deployment_request.expected_dl_bandwidth = self.dl[action]
@@ -865,6 +858,11 @@ class NNESchedulingEnv(gym.Env):
                 self.deployment_request.expected_access_latency = DEFAULT_NODE_TYPES[type_id]['latency']
                 self.deployment_request.expected_cost = DEFAULT_NODE_TYPES[type_id]['cost']
                 self.deployment_request.expected_processing_latency = self.processing_latency[action]
+
+                # for QOE metrics
+                self.deployment_request.latency_q = self.latency_q[action]
+                self.deployment_request.jerkiness_q = self.jerkiness_q[action]
+                self.deployment_request.sync_q =  self.sync_q[action]
 
                 self.penalty = False
 
@@ -1216,20 +1214,3 @@ class NNESchedulingEnv(gym.Env):
 
             j += 1
         return
-
-"""
- # 2 new feature for the environment
-                        self.inter_arrival_dl[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_UL]
-                        self.inter_arrival_ul[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_DL]
-                        
-                        #
-                        self.throuput_ul[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_UL]
-                        #self.ul[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_UL]
-                        self.throuput_dl[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_DL]
-                        #self.dl[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_DL]
-                        # self.latency[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_LATENCY]
-                        self.packetsize_dl[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_JITTER]
-                        #self.jitter[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_JITTER]
-                        # Update values
-                        self.packetsize_ul[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_RTT_Q90]
-"""
