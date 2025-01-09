@@ -181,10 +181,12 @@ def save_obs_to_csv(file_name, timestamp, num_pods, desired_replicas, cpu_usage,
         )
 '''
 
-
-def save_to_csv(file_name, episode, reward, ep_block_prob, ep_accepted_requests, avg_deployment_cost, avg_total_latency,
+def save_to_csv(file_name, episode, reward, ep_block_prob, ep_accepted_requests,
+                avg_deployment_cost, avg_total_latency,
                 avg_access_latency, avg_proc_latency,
-                avg_rtt, avg_dl, avg_ul, avg_jitter, gini, #telia_requests, telenor_requests, ice_requests,
+                avg_throuput_in, avg_packetsize_in, avg_interarrival_in, avg_throuput_out, avg_packetsize_out, avg_interarrival_out,
+                avg_latency_binary, avg_jerkiness_binary, avg_sync_binary,
+                gini, #telia_requests, telenor_requests, ice_requests,
                 execution_time):
     file = open(file_name, 'a+', newline='')  # append
     # file = open(file_name, 'w', newline='')
@@ -204,10 +206,10 @@ def save_to_csv(file_name, episode, reward, ep_block_prob, ep_accepted_requests,
              'avg_total_latency': float("{:.2f}".format(avg_total_latency)),
              'avg_access_latency': float("{:.2f}".format(avg_access_latency)),
              'avg_proc_latency': float("{:.2f}".format(avg_proc_latency)),
-             'avg_rtt': float("{:.2f}".format(avg_rtt)),
-             'avg_dl': float("{:.2f}".format(avg_dl)),
-             'avg_ul': float("{:.2f}".format(avg_ul)),
-             'avg_jitter': float("{:.2f}".format(avg_jitter)),
+             # 'avg_rtt': float("{:.2f}".format(avg_rtt)),
+             # 'avg_dl': float("{:.2f}".format(avg_dl)),
+             # 'avg_ul': float("{:.2f}".format(avg_ul)),
+             # 'avg_jitter': float("{:.2f}".format(avg_jitter)),
              'gini': float("{:.2f}".format(gini)),
              #'telia_requests': telia_requests,
              #'telenor_requests': telenor_requests,
