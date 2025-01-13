@@ -31,10 +31,10 @@ parser.add_argument('--training', default=False, action="store_true", help='Trai
 parser.add_argument('--testing', default=True, action="store_true", help='Testing mode')
 parser.add_argument('--loading', default=False, action="store_true", help='Loading mode')
 parser.add_argument('--load_path',
-                    default='results/v2/nne/multi/latineq/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
+                    default='./results/nne/multi/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
                     help='Loading path, ex: logs/model/test.zip')
 parser.add_argument('--test_path',
-                    default='results/v2/nne/multi/latineq/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
+                    default='./results/nne/multi/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
                     help='Testing path, ex: logs/model/test.zip')
 parser.add_argument('--steps', default=200000, help='Save model after X steps')
 parser.add_argument('--total_steps', default=200000, help='The total number of steps.')
@@ -101,10 +101,10 @@ def get_load_model(env, alg, tensorboard_log, load_path):
 
 def get_env(env_name, num_nodes, reward_function):
     envs = 0
-    latency_weight = 0.0
-    cost_weight = 0.0
-    gini_weight = 0.0
-    bandwidth_weight = 1.0
+    # latency_weight = 0.0
+    # cost_weight = 0.0
+    # gini_weight = 0.0
+    # bandwidth_weight = 1.0
     factor = 1
     path = "mydata/"
 
@@ -113,12 +113,13 @@ def get_env(env_name, num_nodes, reward_function):
         env = NNESchedulingEnv(num_nodes=num_nodes, arrival_rate_r=100, call_duration_r=1,
                                episode_length=100,
                                reward_function=reward_function,
-                               latency_weight=latency_weight,
-                               cost_weight=cost_weight,
-                               gini_weight=gini_weight,
+                               # latency_weight=latency_weight,
+                               # cost_weight=cost_weight,
+                               # gini_weight=gini_weight,
+                               #bandwidth_weight=bandwidth_weight
                                factor=factor,
                                path_csv_files=path,
-                               bandwidth_weight=bandwidth_weight)
+                               )
         # For faster training!
         # otherwise just comment the following lines
 
@@ -129,12 +130,13 @@ def get_env(env_name, num_nodes, reward_function):
         env = SubprocVecEnv([lambda: NNESchedulingEnv(num_nodes=num_nodes, arrival_rate_r=100,
                                                       call_duration_r=1, episode_length=100,
                                                       reward_function=reward_function,
-                                                      latency_weight=latency_weight,
-                                                      cost_weight=cost_weight,
-                                                      gini_weight=gini_weight,
+                                                      # latency_weight=latency_weight,
+                                                      # cost_weight=cost_weight,
+                                                      # gini_weight=gini_weight,
+                                                      # bandwidth_weight=bandwidth_weight,
                                                       factor=factor,
-                                                      path_csv_files=path,
-                                                      bandwidth_weight=bandwidth_weight)
+                                                      path_csv_files=path
+                                                      )
                              for i in range(1)])
         envs = VecMonitor(env, filename="vec_nne_gym_results", info_keywords=info_keywords)
 

@@ -271,3 +271,7 @@ def calculate_gini_coefficient(loads):
     gini_coefficient = gini_numerator / (2 * n ** 2 * mean_load)
 
     return gini_coefficient
+
+def calculate_qoe(sync, jerkiness, latnecy, vrsq = 0):
+    qoe = sync / 5.0 #+ jerkiness / 5. + latnecy / 5. + vrsq / 5.
+    return qoe

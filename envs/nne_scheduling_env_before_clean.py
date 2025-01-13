@@ -2,7 +2,6 @@ import csv
 import heapq
 import time
 import logging
-import random
 import numpy as np
 import pandas as pd
 import gym
@@ -11,14 +10,14 @@ from gym.utils import seeding
 from statistics import mean
 from datetime import datetime, timedelta
 from envs.utils import DeploymentRequest, get_c2e_deployment_list, save_to_csv, sort_dict_by_value, \
-    calculate_gini_coefficient, normalize, calculate_qoe
+    calculate_gini_coefficient, normalize
 
-from envs.constants import *
+from constants import *
 # import glob
 # import math
 # import operator
 # import os
-
+# import random
 
 class NNESchedulingEnv(gym.Env):
     """ NNE Scheduling env in Kubernetes - an OpenAI gym environment"""
@@ -33,7 +32,6 @@ class NNESchedulingEnv(gym.Env):
                  gini_weight=GINI_WEIGHT,
                  cost_weight=COST_WEIGHT,
                  bandwidth_weight=BANDWIDTH_WEIGHT,
-                 qoe_weight=QOE_WEIGHT,
                  seed=SEED,
                  factor=FACTOR,
                  path_csv_files=PATH_CSV_FILES,
@@ -41,8 +39,6 @@ class NNESchedulingEnv(gym.Env):
 
         # Define action and observation space
         super(NNESchedulingEnv, self).__init__()
-
-        #initializing self with inputs
         self.name = "qoe_gym"
         self.__version__ = "0.0.1"
         self.reward_function = reward_function
@@ -50,173 +46,18 @@ class NNESchedulingEnv(gym.Env):
         self.total_number = num_nodes #* NUM_SERVER_TYPE
         self.current_step = 0
         self.default_node_types = DEFAULT_NODE_TYPES
+
+        # Variables for rewards
+        self.latency_weight = latency_weight
+        self.gini_weight = gini_weight
+        self.cost_weight = cost_weight
+        self.bandwidth_weight = bandwidth_weight
+
         self.arrival_rate_r = arrival_rate_r
         self.call_duration_r = call_duration_r
         self.episode_length = episode_length
         self.running_requests: list[DeploymentRequest] = []
-        self.seed = seed
-        self.np_random, seed = seeding.np_random(self.seed)
-        self.factor = factor
-        #Initialize variables
-        self.initialize_rewards(latency_weight, gini_weight, cost_weight, qoe_weight)
 
-        self.initialize_avg_metrics()
-
-        self.processing_latency = np.zeros(self.total_number)
-        self.node_id = np.zeros(self.total_number)
-        self.server_type_id = np.zeros(self.total_number)
-
-        self.initialize_metrics_arrays()
-
-        logging.info(
-            "[Init] Env: {} | Version {} | Num_Nodes: {} | Total Number: {}".format(self.name, self.__version__,
-                                                                                    num_nodes, self.total_number))
-
-        # Defined as a matrix having as rows the nodes and columns their associated metrics
-        self.observation_space = spaces.Box(low=MIN_OBS,
-                                            high=MAX_OBS,
-                                            shape=(self.total_number + 1, NUM_METRICS_NODES + NUM_METRICS_REQUEST),
-                                            dtype=np.float32)
-
-        # Action Space
-        # deploy the service on node 1 - ID 1, node 1 ID 2,..., n + reject it
-        self.num_actions = self.total_number + 1
-        # Discrete action space
-        self.action_space = spaces.Discrete(self.num_actions)
-        # Action and Observation Space
-        logging.info("[Init] Action Space: {}".format(self.action_space))
-        logging.info("[Init] Observation Space: {}".format(self.observation_space))
-        # logging.info("[Init] Observation Space Shape: {}".format(self.observation_space.shape))
-
-        # Setting the experiment based on Cloud2Edge (C2E) deployments
-        self.deploymentList = get_c2e_deployment_list()
-        self.deployment_request = None
-
-        #for test remove this later
-        order = [0, 1, 2, 3]
-        np.random.shuffle(order)
-
-        logging.info("[Init] Resource Capacities... ")
-        self.initialize_resources(order)
-
-
-
-        # CSV files for each node
-        self.path_csv_files = path_csv_files
-        self.node_csv_data = []
-        self.df_node = []
-        self.action_valid = []
-
-        self.df_node_selected_rows = []
-        self.selected_ts = None
-
-        self.intialize_node(order)
-
-        # Choose a random timestamp to start Episode
-        self.get_start_index()
-
-        # Update network
-        self.update_network_values()
-
-        # Variables for logging
-        self.current_time = 0
-        self.penalty = False
-        self.accepted_requests = 0
-        self.offered_requests = 0
-        self.ep_accepted_requests = 0
-        self.next_request()
-
-        # Info & episode over
-        self.total_reward = 0
-        self.episode_over = False
-        self.info = {}
-        self.block_prob = 0
-        self.ep_block_prob = 0
-        self.time_start = 0
-        self.execution_time = 0
-        self.episode_count = 0
-        self.file_results_name = file_results_name
-        self.file_results = file_results_name + ".csv"
-        self.obs_csv = self.name + "_obs.csv"
-
-    def initialize_resources(self, order):
-        # New: Resource capacities based on node type
-        self.cpu_capacity = np.zeros(self.total_number)
-        self.memory_capacity = np.zeros(self.total_number)
-        self.node_type = [0] * self.total_number
-        # Keeps track of allocated resources
-        self.allocated_cpu = np.zeros(self.total_number)
-        self.allocated_memory = np.zeros(self.total_number)
-
-        random_cpu = self.np_random.uniform(low=0.0, high=0.2, size=self.num_nodes)
-        random_memory = self.np_random.uniform(low=0.0, high=0.2, size=self.num_nodes)
-
-        # Keeps track of Free resources for deployment requests
-        self.free_cpu = np.zeros(self.total_number)
-        self.free_memory = np.zeros(self.total_number)
-
-        j=0
-        for n in range(self.num_nodes):
-            node_type = order[j] #int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
-            #for i_s in range(NUM_SERVER_TYPE):
-            self.node_id[j] = n
-            self.node_type[j] = node_type
-            self.cpu_capacity[j] = DEFAULT_NODE_TYPES[node_type]['cpu']
-            self.memory_capacity[j] = DEFAULT_NODE_TYPES[node_type]['mem']
-
-            logging.info("[Init] node: {} | Type: {} "
-                        "| cpu: {} | mem: {}".format(n + 1,
-                                                         DEFAULT_NODE_TYPES[node_type]['type'],
-                                                         self.cpu_capacity[j],
-                                                         self.memory_capacity[j]))
-            j += 1
-
-
-
-        j = 0
-        for n in range(self.num_nodes):
-            # for i_s in range(NUM_SERVER_TYPE):
-            self.allocated_cpu[j] = random_cpu[n]
-            self.allocated_memory[j] = random_memory[n]
-            j += 1
-
-
-
-    def initialize_rewards(self, latency_weight, gini_weight, cost_weight, qoe_weight):
-        self.latency_weight = latency_weight
-        self.gini_weight = gini_weight
-        self.cost_weight = cost_weight
-        #self.bandwidth_weight = bandwidth_weight
-        self.qoe_weight = qoe_weight
-
-    def initialize_metrics_arrays(self):
-        # MJ: these are the environment variable
-        # These are the observational values in the environment: at each step these are getting filled from the simulation
-        self.throuput_in = np.zeros(self.total_number)
-        self.throuput_out = np.zeros(self.total_number)
-        self.packetsize_in = np.zeros(self.total_number)
-        self.packetsize_out = np.zeros(self.total_number)
-        self.interarrival_in = np.zeros(self.total_number)
-        self.interarrival_out = np.zeros(self.total_number)
-
-        # simulation for if have the actual labels : QOE MODEL
-        self.latency_binary = np.zeros(self.total_number)
-        self.jerkiness_binary = np.zeros(self.total_number)
-        self.sync_binary = np.zeros(self.total_number)
-
-        # variable for the actual reported value
-        self.latency_q = np.zeros(self.total_number)
-        self.jerkiness_q = np.zeros(self.total_number)
-        self.sync_q = np.zeros(self.total_number)
-
-
-        # self.rtt = np.zeros(self.total_number)
-        # self.ul = np.zeros(self.total_number)
-        # self.dl = np.zeros(self.total_number)
-        # self.jitter = np.zeros(self.total_number)
-
-
-    def initialize_avg_metrics(self):
         # ==========================
         # -------------------------
         self.avg_throuput_in = []
@@ -247,23 +88,156 @@ class NNESchedulingEnv(gym.Env):
         self.avg_access_latency = []
         self.total_latency = []
         self.avg_deployment_cost = []
+
         self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
 
+        self.processing_latency = np.zeros(self.total_number)
+        self.node_id = np.zeros(self.total_number)
+        self.server_type_id = np.zeros(self.total_number)
 
-    def intialize_node(self, order):
+        # MJ: these are the environment variable
+        # These are the observational values in the environment: at each step these are getting filled from the simulation
+        self.throuput_in = np.zeros(self.total_number)
+        self.throuput_out = np.zeros(self.total_number)
+        self.packetsize_in = np.zeros(self.total_number)
+        self.packetsize_out = np.zeros(self.total_number)
+        self.interarrival_in = np.zeros(self.total_number)
+        self.interarrival_out = np.zeros(self.total_number)
+
+        # simulation for if have the actual labels : QOE MODEL
+        self.latency_binary = np.zeros(self.total_number)
+        self.jerkiness_binary = np.zeros(self.total_number)
+        self.sync_binary = np.zeros(self.total_number)
+
+        # variable for the actual reported value
+        self.latency_q = np.zeros(self.total_number)
+        self.jerkiness_q = np.zeros(self.total_number)
+        self.sync_q = np.zeros(self.total_number)
+
+        # self.rtt = np.zeros(self.total_number)
+        # self.ul = np.zeros(self.total_number)
+        # self.dl = np.zeros(self.total_number)
+        # self.jitter = np.zeros(self.total_number)
+
+        #
+        self.seed = seed
+        self.np_random, seed = seeding.np_random(self.seed)
+        self.factor = factor
+
+        logging.info(
+            "[Init] Env: {} | Version {} | Num_Nodes: {} | Total Number: {}".format(self.name, self.__version__,
+                                                                                    num_nodes, self.total_number))
+
+        # Defined as a matrix having as rows the nodes and columns their associated metrics
+        self.observation_space = spaces.Box(low=MIN_OBS,
+                                            high=MAX_OBS,
+                                            shape=(self.total_number + 1, NUM_METRICS_NODES + NUM_METRICS_REQUEST),
+                                            dtype=np.float32)
+
+        # Action Space
+        # deploy the service on node 1 - ID 1, node 1 ID 2,..., n + reject it
+        self.num_actions = self.total_number + 1
+
+        # Discrete action space
+        self.action_space = spaces.Discrete(self.num_actions)
+
+        # Action and Observation Space
+        logging.info("[Init] Action Space: {}".format(self.action_space))
+        logging.info("[Init] Observation Space: {}".format(self.observation_space))
+        # logging.info("[Init] Observation Space Shape: {}".format(self.observation_space.shape))
+
+        # Setting the experiment based on Cloud2Edge (C2E) deployments
+        self.deploymentList = get_c2e_deployment_list()
+        self.deployment_request = None
+
+        # New: Resource capacities based on node type
+        self.cpu_capacity = np.zeros(self.total_number)
+        self.memory_capacity = np.zeros(self.total_number)
+        self.node_type = [0] * self.total_number
+
+
+
+        logging.info("[Init] Resource Capacities... ")
+        j = 0
+        for n in range(num_nodes):
+            node_type = int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
+            #for i_s in range(NUM_SERVER_TYPE):
+            self.node_id[j] = n
+            #self.server_type_id[j] = i_s
+            self.node_type[j] = node_type
+            self.cpu_capacity[j] = DEFAULT_NODE_TYPES[node_type]['cpu']
+            self.memory_capacity[j] = DEFAULT_NODE_TYPES[node_type]['mem']
+
+            logging.info("[Init] node: {} | Type: {} "
+                        "| cpu: {} | mem: {}".format(n + 1,
+                                                         DEFAULT_NODE_TYPES[node_type]['type'],
+                                                         self.cpu_capacity[j],
+                                                         self.memory_capacity[j]))
+            j += 1
+
+        # Keeps track of allocated resources 
+        self.allocated_cpu = np.zeros(self.total_number)
+        self.allocated_memory = np.zeros(self.total_number)
+
+        random_cpu = self.np_random.uniform(low=0.0, high=0.2, size=num_nodes)
+        random_memory = self.np_random.uniform(low=0.0, high=0.2, size=num_nodes)
+        j = 0
+        for n in range(num_nodes):
+            #for i_s in range(NUM_SERVER_TYPE):
+            self.allocated_cpu[j] = random_cpu[n]
+            self.allocated_memory[j] = random_memory[n]
+            j += 1
+
+        # Keeps track of Free resources for deployment requests
+        self.free_cpu = np.zeros(self.total_number)
+        self.free_memory = np.zeros(self.total_number)
+
+        # CSV files for each node
+        self.path_csv_files = path_csv_files
+        self.node_csv_data = []
+        self.df_node = []
+        self.action_valid = []
+
+        self.df_node_selected_rows = []
+        self.selected_ts = None
+
+        self.intialize_node()
+
+        # Choose a random timestamp to start Episode
+        self.get_start_index()
+
+        # Update network
+        self.update_network_values()
+
+        # Variables for logging
+        self.current_time = 0
+        self.penalty = False
+        self.accepted_requests = 0
+        self.offered_requests = 0
+        self.ep_accepted_requests = 0
+        self.next_request()
+
+        # Info & episode over
+        self.total_reward = 0
+        self.episode_over = False
+        self.info = {}
+        self.block_prob = 0
+        self.ep_block_prob = 0
+        self.time_start = 0
+        self.execution_time = 0
+        self.episode_count = 0
+        self.file_results_name = file_results_name
+        self.file_results = file_results_name + ".csv"
+        self.obs_csv = self.name + "_obs.csv"
+
+    def intialize_node(self):
         j = 0
         file_df = pd.read_csv("./mydata/simulation.csv")
-        #print(distributed)
         for n in range(self.num_nodes):
-            config_random = order[n]
-            #print(config_random)
-            S = file_df[file_df['Config'] == SERVER_TYPES[config_random]]
-            self.server_type_id[n] = config_random
-            #S = file_df[file_df['Config'] == SERVER_TYPES[j % 4]]
-            #print("CONFIG : ",SERVER_TYPES[j%4])
-            #print("S : ",S)
-
-            sampled_df = S.sample(n=1000, replace=True)
+            config_random = np.random.choice(SERVER_TYPES)
+            #S = file_df[file_df['Config'] == config_random]
+            S = file_df[file_df['Config'] == SERVER_TYPE[j]]
+            sampled_df = S.sample(n=1000, random_state=42 + j,replace=True)
 
             #for i_s in range(NUM_SERVER_TYPE):
             #-------------------------------------------------------------------
@@ -277,7 +251,7 @@ class NNESchedulingEnv(gym.Env):
             #self.df_node.append(pd.read_csv(self.node_csv_data[j]))
             self.df_node.append(sampled_df)
 
-            server_type = SERVER_TYPES[config_random]
+            server_type = config_random
 
             # Select rows based on server type
             selected_rows = self.df_node[j][(self.df_node[j][SERVER_TYPE] == server_type)]
@@ -285,10 +259,6 @@ class NNESchedulingEnv(gym.Env):
             # print(selected_rows)
             self.df_node_selected_rows.append(selected_rows)
 
-            # logging.info("[Init] Node: {} | Provider: {} | Interface: {} | size of rows: {}".format(n + 1,
-            #   PROVIDERS[p],INTERFACES[i], len(selected_rows)))
-
-            # If len(rows) = 0 then provider or interface do not exist
             if len(selected_rows) == 0:
                 # logging.info("[Init] Node: {} | Provider: {} | Interface: {}
                 # do not exist in CSV file".format(n + 1, PROVIDERS[p], INTERFACES[i]))
@@ -317,6 +287,105 @@ class NNESchedulingEnv(gym.Env):
 
         self.block_prob = 0
         self.ep_block_prob = 0
+        self.avg_total_latency = []
+        self.avg_processing_latency = []
+        self.avg_access_latency = []
+        self.avg_deployment_cost = []
+        # -------------------------
+        self.avg_throuput_in = []
+        self.avg_packetsize_in = []
+        self.avg_interarrival_in = []
+        # -------------------------
+        self.avg_throuput_out = []
+        self.avg_packetsize_out = []
+        self.avg_interarrival_out = []
+        # -------------------------
+        self.avg_latency_binary = []
+        self.avg_latency_q = []
+        # -------------------------
+        self.avg_jerkiness_binary = []
+        self.avg_jerkiness_q = []
+        #-------------------------
+        self.avg_sync_binary = []
+        self.avg_sync_q = []
+        #----------------------
+        # self.avg_rtt = []
+        # self.avg_ul = []
+        # self.avg_dl = []
+        # self.avg_jitter = []
+        self.total_latency = []
+
+        self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
+        
+        # Reset Deployment Data
+        self.deploymentList = get_c2e_deployment_list()
+
+        # Metrics for all interfaces
+        # self.rtt = np.zeros(self.total_number)
+        # self.ul = np.zeros(self.total_number)
+        # self.dl = np.zeros(self.total_number)
+        # # self.latency = np.zeros(self.total_number)
+        # self.jitter = np.zeros(self.total_number)
+        # self.processing_latency = np.zeros(self.total_number)
+
+        self.throuput_in = np.zeros(self.total_number)
+        self.throuput_out = np.zeros(self.total_number)
+        self.packetsize_in = np.zeros(self.total_number)
+        self.packetsize_out = np.zeros(self.total_number)
+        self.interarrival_in = np.zeros(self.total_number)
+        self.interarrival_out = np.zeros(self.total_number)
+
+        # simulation for if have the actual labels : QOE MODEL
+        self.latency_binary = np.zeros(self.total_number)
+        self.jerkiness_binary = np.zeros(self.total_number)
+        self.sync_binary = np.zeros(self.total_number)
+
+        # variable for the actual reported value
+        self.latency_q = np.zeros(self.total_number)
+        self.jerkiness_q = np.zeros(self.total_number)
+        self.sync_q = np.zeros(self.total_number)
+
+        # New: Resource capacities based on node type
+        self.cpu_capacity = np.zeros(self.total_number)
+        self.memory_capacity = np.zeros(self.total_number)
+        self.node_type = [0] * self.total_number
+
+        logging.info("[Reset] Resource Capacities... ")
+        j = 0
+        for n in range(self.num_nodes):
+            node_type = int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
+            # for i_s in range(NUM_SERVER_TYPE):
+            self.node_id[j] = n
+            # self.server_type_id[j] = i_s
+            self.node_type[j] = node_type
+            self.cpu_capacity[j] = DEFAULT_NODE_TYPES[node_type]['cpu']
+            self.memory_capacity[j] = DEFAULT_NODE_TYPES[node_type]['mem']
+
+            logging.info("[Init] node: {} | Type: {} "
+                         "| cpu: {} | mem: {}".format(n + 1,
+                                                      DEFAULT_NODE_TYPES[node_type]['type'],
+                                                      self.cpu_capacity[j],
+                                                      self.memory_capacity[j]))
+            j += 1
+
+        # Keeps track of allocated resources
+        self.allocated_cpu = np.zeros(self.total_number)
+        self.allocated_memory = np.zeros(self.total_number)
+
+        random_cpu = self.np_random.uniform(low=0.0, high=0.2, size=self.num_nodes)
+        random_memory = self.np_random.uniform(low=0.0, high=0.2, size=self.num_nodes)
+        j = 0
+        for n in range(self.num_nodes):
+            #for i_s in range(NUM_SERVER_TYPE):
+            self.allocated_cpu[j] = random_cpu[n]
+            self.allocated_memory[j] = random_memory[n]
+            j += 1
+
+        # Keeps track of Free resources for deployment requests
+        self.free_cpu = np.zeros(self.total_number)
+        self.free_memory = np.zeros(self.total_number)
+
+        # Do not consider CSV part in reset to speedup training
 
         # files for each node
         self.node_csv_data = []
@@ -326,20 +395,8 @@ class NNESchedulingEnv(gym.Env):
         # Rows for each node
         self.df_node_selected_rows = []
         self.selected_ts = None
-        #==================================================
-        # for test remove this later
-        order = [0, 1, 2, 3]
-        np.random.shuffle(order)
-        #=================================================
 
-        self.initialize_avg_metrics()
-        # Reset Deployment Data
-        self.deploymentList = get_c2e_deployment_list()
-        self.initialize_metrics_arrays()
-        logging.info("[Reset] Resource Capacities... ")
-        self.initialize_resources(order)
-
-        self.intialize_node(order)
+        self.intialize_node()
 
         # Choose a random index to start Episode
         self.get_start_index()
@@ -478,7 +535,7 @@ class NNESchedulingEnv(gym.Env):
             gini = calculate_gini_coefficient(self.avg_load_served_per_provider)
 
             logging.info("[Step] Episode finished, saving results to csv...")
-            qoe = calculate_qoe(avg_sync_q, avg_latency_q, avg_jerkiness_q)
+            qoe = ( avg_sync_q + avg_latency_q + avg_jerkiness_q) / 3.0
             #print(qoe)
 
             # Prepare data dictionary
@@ -498,12 +555,12 @@ class NNESchedulingEnv(gym.Env):
                 'avg_throuput_out': round(mean(self.avg_throuput_out), 2),
                 'avg_packetsize_out': round(mean(self.avg_packetsize_out), 2),
                 'avg_interarrival_out': round(mean(self.avg_interarrival_out), 2),
-                'avg_latency_binary': round(mean(self.avg_latency_binary), 3),
-                'avg_jerkiness_binary': round(mean(self.avg_jerkiness_binary), 3),
-                'avg_sync_binary': round(mean(self.avg_sync_binary), 3),
-                'avg_qoe': round(qoe, 3),
-                'gini': round(gini, 3),
-                'execution_time': round(self.execution_time, 3)
+                'avg_latency_binary': round(mean(self.avg_latency_binary), 2),
+                'avg_jerkiness_binary': round(mean(self.avg_jerkiness_binary), 2),
+                'avg_sync_binary': round(mean(self.avg_sync_binary), 2),
+                'avg_qoe': round(qoe, 2),
+                'gini': round(gini, 2),
+                'execution_time': round(self.execution_time, 2)
             }
 
             save_to_csv(self.file_results, data)
@@ -526,7 +583,6 @@ class NNESchedulingEnv(gym.Env):
                     return 1
             else:
                 return 1
-
         # Multi-objective
         elif self.reward_function == MULTI:
             if self.penalty:
@@ -542,17 +598,16 @@ class NNESchedulingEnv(gym.Env):
                 # Latency
                 #latency = self.deployment_request.expected_rtt + self.deployment_request.expected_access_latency + self.deployment_request.expected_processing_latency
                 latency = self.deployment_request.expected_access_latency + self.deployment_request.expected_processing_latency
-                logging.info('[Multi Reward] Latency components:  Lat: {} | Processing: {}'.format(
+                logging.info('[Multi Reward] Latency components: RTT: {} | Lat: {} | Processing: {}'.format(
+                    self.deployment_request.expected_rtt,
                     self.deployment_request.expected_access_latency,
                     self.deployment_request.expected_processing_latency))
                 # Gini
                 gini = calculate_gini_coefficient(self.avg_load_served_per_provider)
-
                 # Cost
                 cost = self.deployment_request.expected_cost
-
                 # Bandwidth
-                qoe = calculate_qoe(self.deployment_request.sync_q, self.deployment_request.jerkiness_q, self.deployment_request.latency_q)
+                qoe = (self.deployment_request.sync_q + self.deployment_request.latency_q + self.deployment_request.jerkiness_q) / 3.0
 
                 #bandwidth = self.deployment_request.expected_dl_bandwidth + self.deployment_request.expected_ul_bandwidth
                 #latency_q = self.late
@@ -560,25 +615,25 @@ class NNESchedulingEnv(gym.Env):
                 #TODO : Add QoE here
                 #==========================================
                 logging.info(
-                    '[Multi Reward] latency: {} | gini: {} | cost: {} | qoe: {}| '.format(latency, gini, cost,qoe))
+                    '[Multi Reward] latency: {} | gini: {} | cost: {} | Latency: | '.format(latency, gini, cost))
 
                 latency = normalize(latency, MIN_RTT + MIN_LATENCY + MIN_PROC, MAX_RTT + MAX_LATENCY + MAX_PROC)
                 cost = normalize(cost, MIN_COST, MAX_COST)
                 #bandwidth = normalize(bandwidth, MIN_DL + MIN_UL, MAX_DL + MAX_UL)
-                #qoe = normalize(qoe, 0, 5)
+                qoe = normalize(cost, 0, 5)
 
-                reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (1 - cost) + self.qoe_weight *  (1 - qoe)
+                #reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (
+                        #1 - cost) + self.bandwidth_weight * qoe
+                reward = 1 - cost
 
+                #reward = qoe
                 logging.info(
-                    '[Multi Reward] Normalized: latency: {} | gini: {} | cost: {} | qoe: {}|'.format(latency, gini, cost, qoe))
+                    '[Multi Reward] Normalized: latency: {} | gini: {} | cost: {} | '.format(latency, gini, cost))
                 logging.info(
-                    '[Multi Reward] Applying weights: latency {} | gini part: {} | cost: {} | qoe: {}'.format(
+                    '[Multi Reward] Applying weights: latency {} | gini part: {} | cost: {} | '.format(
                         self.latency_weight * (1 - latency),
                         self.gini_weight * (1 - gini),
-                        self.cost_weight * (1 - cost),
-                        self.qoe_weight * (1 - qoe)
-                    ))
-
+                        self.cost_weight * (1 - cost)))
                 logging.info('[Multi Reward] Final reward: {}'.format(reward))
 
                 return reward
@@ -701,28 +756,29 @@ class NNESchedulingEnv(gym.Env):
     def get_state(self):
         # Get Observation state
         node = np.full(shape=(1, NUM_METRICS_NODES), fill_value=-1)
+        #print(self.allocated_cpu.shape)
+        #print(self.throuput_in)
 
-        # node = np.full(shape=(1, 15), fill_value=-1)
         observation = np.stack([self.allocated_cpu,
                                 self.cpu_capacity,
                                 self.allocated_memory,
                                 self.memory_capacity,
                                 self.server_type_id,
-                                # self.throuput_in,
-                                # self.throuput_out,
-                                # self.packetsize_in,
-                                # self.packetsize_out,
-                                # self.interarrival_in,
-                                # self.interarrival_out,
+                                self.throuput_in,
+                                self.throuput_out,
+                                self.packetsize_in,
+                                self.packetsize_out,
+                                self.interarrival_in,
+                                self.interarrival_out,
                                 #self.rtt,
                                 # self.latency,
                                 #self.ul,
                                 #self.dl,
                                 #self.jitter,
-                                #self.processing_latency,
-                                #self.latency_binary,
-                                #self.jerkiness_binary,
-                                #self.sync_binary
+                                self.processing_latency,
+                                self.latency_binary,
+                                self.jerkiness_binary,
+                                self.sync_binary
                                 ],
                                axis=1)
 
@@ -744,19 +800,16 @@ class NNESchedulingEnv(gym.Env):
             (self.total_number + 1, 1),
         )
 
-        # logging.info('[Get State]: request: {}'.format(request))
-        # logging.info('[Get State]: request shape: {}'.format(request.shape))
-        #print("observation 1: ",observation.shape)
-        #print("node : ", node.shape)
-        #print("request: ",request.shape)
+        logging.info('[Get State]: request: {}'.format(request))
+        logging.info('[Get State]: request shape: {}'.format(request.shape))
+
         observation = np.concatenate([observation, node], axis=0)
-        # logging.info('[Get State]: concatenation: {}'.format(observation))
-        # logging.info('[Get State]: concatenation shape: {}'.format(observation.shape))
-        #print("observation 2: ",observation.shape)
+        logging.info('[Get State]: concatenation: {}'.format(observation))
+        logging.info('[Get State]: concatenation shape: {}'.format(observation.shape))
+
         observation = np.concatenate([observation, request], axis=1)
-        #print("observation 3: ", observation.shape)
-        # logging.info('[Get State]: concatenation: {}'.format(observation))
-        # logging.info('[Get State]: concatenation shape: {}'.format(observation.shape))
+        logging.info('[Get State]: concatenation: {}'.format(observation))
+        logging.info('[Get State]: concatenation shape: {}'.format(observation.shape))
 
         '''
         logging.info('[Get State]: cluster: {}'.format(cluster))
@@ -831,7 +884,7 @@ class NNESchedulingEnv(gym.Env):
 
         # 1 additional action: Reject
         valid_actions[self.total_number] = True
-        logging.info('[Action Mask]: Valid actions {} |'.format(valid_actions))
+        # logging.info('[Action Mask]: Valid actions {} |'.format(valid_actions))
         return valid_actions
 
     # Double-check if the selected cluster is full
