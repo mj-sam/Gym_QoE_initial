@@ -11,7 +11,7 @@ from gym.utils import seeding
 from statistics import mean
 from datetime import datetime, timedelta
 from envs.utils import DeploymentRequest, get_c2e_deployment_list, save_to_csv, sort_dict_by_value, \
-    calculate_gini_coefficient, normalize, calculate_qoe
+    calculate_gini_coefficient, normalize, calculate_qoe, simulate_model, model_estimation
 
 from envs.constants import *
 # import glob
@@ -37,7 +37,9 @@ class NNESchedulingEnv(gym.Env):
                  seed=SEED,
                  factor=FACTOR,
                  path_csv_files=PATH_CSV_FILES,
-                 file_results_name=DEFAULT_FILE_NAME_RESULTS):
+                 file_results_name= DEFAULT_FILE_NAME_RESULTS,
+                 qoe_simulation_mode= "Simulation",
+                 qoe_simulated_accuracy= 1,):
 
         # Define action and observation space
         super(NNESchedulingEnv, self).__init__()
@@ -57,26 +59,38 @@ class NNESchedulingEnv(gym.Env):
         self.seed = seed
         self.np_random, seed = seeding.np_random(self.seed)
         self.factor = factor
+
+        self.qoe_simulation_mode = qoe_simulation_mode
+        self.qoe_simulated_accuracy = qoe_simulated_accuracy
+
+        self.file_df = pd.read_csv("./mydata/simulation.csv")
+
+        if self.qoe_simulation_mode == "Simulation":
+            self.file_df = simulate_model(self.file_df, self.qoe_simulated_accuracy, columns = [DF_COLUMN_LATENCY, DF_COLUMN_JERKINESS, DF_COLUMN_SYNC])
+        elif self.qoe_simulation_mode == "Real":
+            self.file_df = model_estimation(self.file_df, columns = [DF_COLUMN_LATENCY, DF_COLUMN_JERKINESS, DF_COLUMN_SYNC])
+        else:
+            logging.info("Invalid QoE Simulation Mode")
+            raise Exception("Invalid QoE Simulation Mode")
+
         #Initialize variables
         self.initialize_rewards(latency_weight, gini_weight, cost_weight, qoe_weight)
-
         self.initialize_avg_metrics()
-
         self.processing_latency = np.zeros(self.total_number)
         self.node_id = np.zeros(self.total_number)
         self.server_type_id = np.zeros(self.total_number)
-
         self.initialize_metrics_arrays()
 
-        logging.info(
-            "[Init] Env: {} | Version {} | Num_Nodes: {} | Total Number: {}".format(self.name, self.__version__,
-                                                                                    num_nodes, self.total_number))
 
         # Defined as a matrix having as rows the nodes and columns their associated metrics
         self.observation_space = spaces.Box(low=MIN_OBS,
                                             high=MAX_OBS,
                                             shape=(self.total_number + 1, NUM_METRICS_NODES + NUM_METRICS_REQUEST),
                                             dtype=np.float32)
+
+        logging.info(
+            "[Init] Env: {} | Version {} | Num_Nodes: {} | Total Number: {}".format(self.name, self.__version__,
+                                                                                    num_nodes, self.total_number))
 
         # Action Space
         # deploy the service on node 1 - ID 1, node 1 ID 2,..., n + reject it
@@ -252,12 +266,12 @@ class NNESchedulingEnv(gym.Env):
 
     def intialize_node(self, order):
         j = 0
-        file_df = pd.read_csv("./mydata/simulation.csv")
         #print(distributed)
+
         for n in range(self.num_nodes):
             config_random = order[n]
             #print(config_random)
-            S = file_df[file_df['Config'] == SERVER_TYPES[config_random]]
+            S = self.file_df[self.file_df['Config'] == SERVER_TYPES[config_random]]
             self.server_type_id[n] = config_random
             #S = file_df[file_df['Config'] == SERVER_TYPES[j % 4]]
             #print("CONFIG : ",SERVER_TYPES[j%4])
@@ -565,7 +579,7 @@ class NNESchedulingEnv(gym.Env):
                 latency = normalize(latency, MIN_RTT + MIN_LATENCY + MIN_PROC, MAX_RTT + MAX_LATENCY + MAX_PROC)
                 cost = normalize(cost, MIN_COST, MAX_COST)
                 #bandwidth = normalize(bandwidth, MIN_DL + MIN_UL, MAX_DL + MAX_UL)
-                #qoe = normalize(qoe, 0, 5)
+                #qoe = normalize(qoe, 0, 15)
 
                 reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (1 - cost) + self.qoe_weight *  (1 - qoe)
 
@@ -703,26 +717,24 @@ class NNESchedulingEnv(gym.Env):
         node = np.full(shape=(1, NUM_METRICS_NODES), fill_value=-1)
 
         # node = np.full(shape=(1, 15), fill_value=-1)
-        observation = np.stack([self.allocated_cpu,
+        observation = np.stack([
+                                # variables related to Cost
+                                self.allocated_cpu,
                                 self.cpu_capacity,
                                 self.allocated_memory,
                                 self.memory_capacity,
-                                self.server_type_id,
+                                # Variables related to Objective Measurements
                                 # self.throuput_in,
                                 # self.throuput_out,
                                 # self.packetsize_in,
                                 # self.packetsize_out,
                                 # self.interarrival_in,
                                 # self.interarrival_out,
-                                #self.rtt,
-                                # self.latency,
-                                #self.ul,
-                                #self.dl,
-                                #self.jitter,
                                 #self.processing_latency,
-                                #self.latency_binary,
-                                #self.jerkiness_binary,
-                                #self.sync_binary
+                                # Variables related to Qoe
+                                self.latency_binary,
+                                self.jerkiness_binary,
+                                self.sync_binary
                                 ],
                                axis=1)
 
@@ -737,39 +749,15 @@ class NNESchedulingEnv(gym.Env):
                 [self.deployment_request.cpu_request,
                  self.deployment_request.memory_request,
                  self.deployment_request.latency_threshold,
-                 # self.deployment_request.ul_traffic,
-                 # self.deployment_request.dl_traffic,
                  self.dt]
             ),
             (self.total_number + 1, 1),
         )
 
-        # logging.info('[Get State]: request: {}'.format(request))
-        # logging.info('[Get State]: request shape: {}'.format(request.shape))
-        #print("observation 1: ",observation.shape)
-        #print("node : ", node.shape)
-        #print("request: ",request.shape)
         observation = np.concatenate([observation, node], axis=0)
-        # logging.info('[Get State]: concatenation: {}'.format(observation))
-        # logging.info('[Get State]: concatenation shape: {}'.format(observation.shape))
-        #print("observation 2: ",observation.shape)
+
         observation = np.concatenate([observation, request], axis=1)
-        #print("observation 3: ", observation.shape)
-        # logging.info('[Get State]: concatenation: {}'.format(observation))
-        # logging.info('[Get State]: concatenation shape: {}'.format(observation.shape))
 
-        '''
-        logging.info('[Get State]: cluster: {}'.format(cluster))
-        logging.info('[Get State]: cluster shape: {}'.format(cluster.shape))
-        logging.info('[Get State]: observation: {}'.format(observation))
-        logging.info('[Get State]: observation shape: {}'.format(observation.shape))
-        logging.info('[Get State]: request demands: {}'.format(request_demands))
-        logging.info('[Get State]: request demands shape: {}'.format(request_demands.shape))
-        logging.info('[Get State]: concatenation: {}'.format(observation))
-        logging.info('[Get State]: concatenation shape: {}'.format(observation.shape))
-        '''
-
-        # logging.info("[Get State] Observation: {}".format(observation))
         return observation
 
     # Save observation to csv file

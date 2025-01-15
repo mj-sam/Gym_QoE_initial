@@ -45,7 +45,7 @@ parser.add_argument('--total_steps', default=200000, help='The total number of s
 
 args = parser.parse_args()
 
-TESTING_FACTORS = True
+TESTING_FACTORS = False
 
 
 def get_model(alg, env, tensorboard_log):

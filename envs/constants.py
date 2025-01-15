@@ -38,7 +38,7 @@ DEFAULT_FILE_NAME_RESULTS = "nne_gym_results"
 # Processing latency added = processing_latency
 
 # Other to consider: Latency removed
-NUM_METRICS_NODES = 5
+NUM_METRICS_NODES = 7
 
 # Computing metrics: 3 metrics = cpu_request, memory_request, latency_threshold
 # Bandwidth requirements? ul_traffic + dl_traffic?
@@ -82,13 +82,13 @@ MAX_PROC = 200.0  # 2.0 * 100 steps = 200.0 ms
 
 # Dataframe column names For OBJECTIVE assessment
 DF_COLUMN_LATENCY = "Latency"
-DF_COLUMN_LATENCY_BINARY = "Latency_binary"
+DF_COLUMN_LATENCY_BINARY = "Latency_for_agent"
 
 DF_COLUMN_JERKINESS = "Jerkiness"
-DF_COLUMN_JERKINESS_BINARY = "Jerkiness_binary"
+DF_COLUMN_JERKINESS_BINARY = "Jerkiness_for_agent"
 
 DF_COLUMN_SYNC = "Sync"
-DF_COLUMN_SYNC_BINARY = "Sync_binary"
+DF_COLUMN_SYNC_BINARY = "Sync_for_agent"
 
 DF_COLUMN_THROUPUT_DL = "throuput_mean_in"
 DF_COLUMN_THROUPUT_UL = "throuput_mean_out"
@@ -115,9 +115,9 @@ DF_COLUMN_INTERARRIVALTIME_UL = "inter_arrival_times_avg_out"
 # Defaults for Weights
 LATENCY_WEIGHT = 0.0
 GINI_WEIGHT = 0.0
-COST_WEIGHT = 1.0
+COST_WEIGHT = 0.0
 BANDWIDTH_WEIGHT = 0.0
-QOE_WEIGHT = 0.0
+QOE_WEIGHT = 1.0
 
 FACTOR = 1.0
 SEED = 42

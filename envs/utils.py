@@ -3,6 +3,8 @@ import os
 from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
+import logging
 
 
 # DeploymentRequest Info
@@ -273,5 +275,87 @@ def calculate_gini_coefficient(loads):
     return gini_coefficient
 
 def calculate_qoe(sync, jerkiness, latnecy, vrsq = 0):
-    qoe = sync / 5.0 #+ jerkiness / 5. + latnecy / 5. + vrsq / 5.
-    return qoe
+    """
+        Calculate QoE based on the given metrics.
+
+        Args:
+            Sync (int): Reported Sync value
+            jerkiness (int): Reported Jerkiness value
+            latency (int): Reported Latency value
+
+        Returns:
+            qoe (float): Calculated QoE value.
+        """
+    # qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.) + (vrsq / 5.)
+    # return qoe / 3.
+    qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.) + (vrsq / 5.)
+
+    return latnecy / 5.
+
+
+def simulate_model(dataframe, accuracy_rate, columns):
+    """
+    Simulates model predictions with a given accuracy rate.
+
+    Args:
+    - dataframe (pd.DataFrame): Input dataframe containing ground truth columns.
+    - accuracy_rate (float): Desired accuracy rate (0.0 to 1.0).
+    - columns (list of str): List of column names to simulate.
+
+    Returns:
+    - pd.DataFrame: DataFrame with simulated predictions added as new columns.
+    """
+    simulated_df = dataframe.copy()
+
+    for column in columns:
+        if column not in simulated_df.columns:
+            raise ValueError(f"Column {column} not found in the dataframe. Skipping simulation for this column.")
+
+        ground_truth = simulated_df[column].values
+        predictions = np.copy(ground_truth)
+
+        correct_mask = np.zeros(len(ground_truth))
+        for i_m in range(len(ground_truth)):
+            if_simulated_model_predicted_correctly = np.random.choice([0, 1], 1, p=[1 - accuracy_rate, accuracy_rate])
+            correct_mask[i_m] = if_simulated_model_predicted_correctly[0]
+
+        # incorrect_mask = np.random.rand(len(ground_truth)) > accuracy_rate
+        unique_labels = np.unique(ground_truth)
+
+        for i in range(len(ground_truth)):
+            # Assign a random incorrect label
+            if correct_mask[i] == 0:
+                incorrect_labels = unique_labels[unique_labels != ground_truth[i]]
+                predictions[i] = np.random.choice(incorrect_labels)
+            elif correct_mask[i] == 1:
+                predictions[i] = ground_truth[i]  # No alternative labels, fallback
+
+        # Add simulated predictions as a new column
+        simulated_df[f"{column}_for_agent"] = predictions
+
+    return simulated_df
+
+def model_estimation(dataframe, columns):
+    """
+    Copies predicted values stored in columns with '_prediction' suffix into '_simulated' columns.
+
+    Args:
+    - dataframe (pd.DataFrame): Input dataframe containing prediction columns.
+    - columns (list of str): List of column names without '_prediction' suffix to copy from.
+
+    Returns:
+    - pd.DataFrame: DataFrame with simulated predictions added as new columns.
+    """
+    estimated_df = dataframe.copy()
+
+    for column in columns:
+        prediction_column = f"{column}_prediction"
+        simulated_column = f"{column}_simulated"
+
+        if prediction_column not in estimated_df.columns:
+            raise ValueError(f"Prediction column {prediction_column} not found in the dataframe.")
+
+        # Copy prediction values to simulated column
+        estimated_df[simulated_column] = estimated_df[prediction_column]
+
+    return estimated_df
