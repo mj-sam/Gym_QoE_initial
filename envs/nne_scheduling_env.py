@@ -38,8 +38,10 @@ class NNESchedulingEnv(gym.Env):
                  factor=FACTOR,
                  path_csv_files=PATH_CSV_FILES,
                  file_results_name= DEFAULT_FILE_NAME_RESULTS,
-                 qoe_simulation_mode= "Simulation",
-                 qoe_simulated_accuracy= 1,):
+                 objective_feature_in_observation = DEFAULT_OBJECTIVE_FEATURE_IN_OBSERVATION,
+                 qoe_in_observation = DEFAULT_QOE_IN_OBSERVATION,
+                 qoe_simulation_mode= QOE_SIMULATION_MODE,
+                 qoe_simulated_accuracy= QOE_SIMULATED_ACCURACY):
 
         # Define action and observation space
         super(NNESchedulingEnv, self).__init__()
@@ -60,8 +62,27 @@ class NNESchedulingEnv(gym.Env):
         self.np_random, seed = seeding.np_random(self.seed)
         self.factor = factor
 
+
+        # different observation space configuration
+        self.objective_feature_in_observation = objective_feature_in_observation
+        self.qoe_in_observation = qoe_in_observation
         self.qoe_simulation_mode = qoe_simulation_mode
         self.qoe_simulated_accuracy = qoe_simulated_accuracy
+        #------------------------------------------------
+        self.feature_count = NUM_METRICS_NODES  # Base features
+        if self.qoe_in_observation:
+            self.feature_count  += 3  # Adding latency, jerkiness, sync
+        if self.objective_feature_in_observation:
+            self.feature_count  += 6  # Adding throughput, packet size, interarrival times
+        # ------------------------------------------------
+        # self.observation_space = spaces.Box(
+        #     low=MIN_OBS,
+        #     high=MAX_OBS,
+        #     shape=(self.total_number + 1, NUM_METRICS_NODES + NUM_METRICS_REQUEST),
+        #     dtype=np.float32
+        # )
+
+
 
         self.file_df = pd.read_csv("./mydata/simulation.csv")
 
@@ -82,10 +103,10 @@ class NNESchedulingEnv(gym.Env):
         self.initialize_metrics_arrays()
 
 
-        # Defined as a matrix having as rows the nodes and columns their associated metrics
+        #Defined as a matrix having as rows the nodes and columns their associated metrics
         self.observation_space = spaces.Box(low=MIN_OBS,
                                             high=MAX_OBS,
-                                            shape=(self.total_number + 1, NUM_METRICS_NODES + NUM_METRICS_REQUEST),
+                                            shape=(self.total_number + 1, self.feature_count  + NUM_METRICS_REQUEST),
                                             dtype=np.float32)
 
         logging.info(
@@ -154,6 +175,7 @@ class NNESchedulingEnv(gym.Env):
         self.obs_csv = self.name + "_obs.csv"
 
     def initialize_resources(self, order):
+        np.random.shuffle(order)
         # New: Resource capacities based on node type
         self.cpu_capacity = np.zeros(self.total_number)
         self.memory_capacity = np.zeros(self.total_number)
@@ -267,6 +289,7 @@ class NNESchedulingEnv(gym.Env):
     def intialize_node(self, order):
         j = 0
         #print(distributed)
+        np.random.shuffle(order)
 
         for n in range(self.num_nodes):
             config_random = order[n]
@@ -714,34 +737,35 @@ class NNESchedulingEnv(gym.Env):
 
     def get_state(self):
         # Get Observation state
-        node = np.full(shape=(1, NUM_METRICS_NODES), fill_value=-1)
 
-        # node = np.full(shape=(1, 15), fill_value=-1)
-        observation = np.stack([
-                                # variables related to Cost
-                                self.allocated_cpu,
-                                self.cpu_capacity,
-                                self.allocated_memory,
-                                self.memory_capacity,
-                                # Variables related to Objective Measurements
-                                # self.throuput_in,
-                                # self.throuput_out,
-                                # self.packetsize_in,
-                                # self.packetsize_out,
-                                # self.interarrival_in,
-                                # self.interarrival_out,
-                                #self.processing_latency,
-                                # Variables related to Qoe
-                                self.latency_binary,
-                                self.jerkiness_binary,
-                                self.sync_binary
-                                ],
-                               axis=1)
+        #node = np.full(shape=(1, NUM_METRICS_NODES), fill_value=-1)
+        node = np.full(shape=(1, self.feature_count), fill_value=-1)
 
-        # logging.info('[Get State]: node: {}'.format(node))
-        # logging.info('[Get State]: node shape: {}'.format(node.shape))
-        # logging.info('[Get State]: observation: {}'.format(observation))
-        # logging.info('[Get State]: observation shape: {}'.format(observation.shape))
+        base_observation = np.stack([
+            self.allocated_cpu,
+            self.cpu_capacity,
+            self.allocated_memory,
+            self.memory_capacity
+        ], axis=1)
+
+        if self.qoe_in_observation:
+            qoe_observation = np.stack([
+                self.latency_binary,
+                self.jerkiness_binary,
+                self.sync_binary
+            ], axis=1)
+            base_observation = np.concatenate([base_observation, qoe_observation], axis=1)
+
+        if self.objective_feature_in_observation:
+            objective_observation = np.stack([
+                self.throuput_in,
+                self.throuput_out,
+                self.packetsize_in,
+                self.packetsize_out,
+                self.interarrival_in,
+                self.interarrival_out
+            ], axis=1)
+            base_observation = np.concatenate([base_observation, objective_observation], axis=1)
 
         # Condition the elements in the set with the current node request
         request = np.tile(
@@ -754,7 +778,7 @@ class NNESchedulingEnv(gym.Env):
             (self.total_number + 1, 1),
         )
 
-        observation = np.concatenate([observation, node], axis=0)
+        observation = np.concatenate([base_observation, node], axis=0)
 
         observation = np.concatenate([observation, request], axis=1)
 

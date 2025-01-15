@@ -38,7 +38,7 @@ DEFAULT_FILE_NAME_RESULTS = "nne_gym_results"
 # Processing latency added = processing_latency
 
 # Other to consider: Latency removed
-NUM_METRICS_NODES = 7
+NUM_METRICS_NODES = 4
 
 # Computing metrics: 3 metrics = cpu_request, memory_request, latency_threshold
 # Bandwidth requirements? ul_traffic + dl_traffic?
@@ -111,6 +111,12 @@ DF_COLUMN_INTERARRIVALTIME_UL = "inter_arrival_times_avg_out"
 # DF_COLUMN_DL = "inter_arrival_ul"
 # #DF_COLUMN_LATENCY = "latency"
 # DF_COLUMN_JITTER = "inter_arrival_ul"
+
+DEFAULT_QOE_IN_OBSERVATION = True
+DEFAULT_OBJECTIVE_FEATURE_IN_OBSERVATION = True
+QOE_SIMULATION_MODE = "Simulation"
+QOE_SIMULATED_ACCURACY = 1.0
+
 
 # Defaults for Weights
 LATENCY_WEIGHT = 0.0
