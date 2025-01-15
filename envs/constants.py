@@ -14,12 +14,21 @@ MULTI = 'multi'
 
 # Node Types
 # Cluster Types
-NUM_NODE_TYPES = 4
-DEFAULT_NODE_TYPES = [{"type": "edge_tier_1", "cpu": 2.0, "mem": 2.0, "cost": 1, "latency": 1},
-                      {"type": "edge_tier_2", "cpu": 2.0, "mem": 4.0, "cost": 2, "latency": 2.5},
-                      {"type": "fog_tier_1", "cpu": 2.0, "mem": 8.0, "cost": 4, "latency": 5.0},
-                      {"type": "fog_tier_2", "cpu": 4.0, "mem": 16.0, "cost": 8, "latency": 7.5},]
-                      #{"type": "cloud", "cpu": 8.0, "mem": 32.0, "cost": 16, "latency": 10.0}]
+NUM_NODE_TYPES = 7
+DEFAULT_NODE_TYPES = [{"type": "edge_tier_1", "cpu": 2.0, "mem": 0.5, "cost": 1,  "latency": 1.0},  # t4g.nano $0.0048
+                      {"type": "edge_tier_2", "cpu": 2.0, "mem": 1.0, "cost": 2,  "latency": 1.5},  # t4g.micro $0.0096
+                      {"type": "edge_tier_3", "cpu": 2.0, "mem": 2.0, "cost": 4,  "latency": 2.5},  # t4g.small $0.0192
+                      {"type": "fog_tier_1",  "cpu": 2.0, "mem": 4.0, "cost": 8,  "latency": 5.0},  # t4g.medium $0.0384
+                      {"type": "fog_tier_2",  "cpu": 2.0, "mem": 8.0, "cost": 16,  "latency": 7.5}, # t4g.large $0.0768
+                      {"type": "cloud_tier_1","cpu": 4.0, "mem": 16.0, "cost": 32, "latency": 8.5}, # t4g.xlarge $0.1536
+                      {"type": "cloud_tier_2","cpu": 8.0, "mem": 32.0, "cost": 64,"latency": 10.0}] # t4g.2xlarge $0.3072
+
+# NUM_NODE_TYPES = 4
+# DEFAULT_NODE_TYPES = [{"type": "edge_tier_1", "cpu": 2.0, "mem": 2.0, "cost": 1, "latency": 1},
+#                       {"type": "edge_tier_2", "cpu": 2.0, "mem": 4.0, "cost": 2, "latency": 2.5},
+#                       {"type": "fog_tier_1", "cpu": 2.0, "mem": 8.0, "cost": 4, "latency": 5.0},
+#                       {"type": "fog_tier_2", "cpu": 4.0, "mem": 16.0, "cost": 8, "latency": 7.5},]
+#                       #{"type": "cloud", "cpu": 8.0, "mem": 32.0, "cost": 16, "latency": 10.0}]
 
 # DEFAULT_NODE_TYPES = [{"type": "edge", "cpu": 4.0, "mem": 4.0, "cost": 1},  # pc-engine and celerway
 #                     {"type": "fog", "cpu": 8.0, "mem": 16.0, "cost": 4},

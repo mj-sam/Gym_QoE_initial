@@ -68,24 +68,17 @@ class NNESchedulingEnv(gym.Env):
         self.qoe_in_observation = qoe_in_observation
         self.qoe_simulation_mode = qoe_simulation_mode
         self.qoe_simulated_accuracy = qoe_simulated_accuracy
-        #------------------------------------------------
+        # -------------------------------------------------------
+        # ------------- observation configuration ----------------
         self.feature_count = NUM_METRICS_NODES  # Base features
         if self.qoe_in_observation:
             self.feature_count  += 3  # Adding latency, jerkiness, sync
         if self.objective_feature_in_observation:
             self.feature_count  += 6  # Adding throughput, packet size, interarrival times
-        # ------------------------------------------------
-        # self.observation_space = spaces.Box(
-        #     low=MIN_OBS,
-        #     high=MAX_OBS,
-        #     shape=(self.total_number + 1, NUM_METRICS_NODES + NUM_METRICS_REQUEST),
-        #     dtype=np.float32
-        # )
 
-
-
+        #-------------------------------------------------------
+        #------------- simulation configuration ----------------
         self.file_df = pd.read_csv("./mydata/simulation.csv")
-
         if self.qoe_simulation_mode == "Simulation":
             self.file_df = simulate_model(self.file_df, self.qoe_simulated_accuracy, columns = [DF_COLUMN_LATENCY, DF_COLUMN_JERKINESS, DF_COLUMN_SYNC])
         elif self.qoe_simulation_mode == "Real":
@@ -193,7 +186,8 @@ class NNESchedulingEnv(gym.Env):
 
         j=0
         for n in range(self.num_nodes):
-            node_type = order[j] #int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
+            #node_type = order[j] #int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
+            node_type = int(self.np_random.integers(low=0, high=NUM_NODE_TYPES))
             #for i_s in range(NUM_SERVER_TYPE):
             self.node_id[j] = n
             self.node_type[j] = node_type
