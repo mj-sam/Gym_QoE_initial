@@ -34,7 +34,7 @@ parser.add_argument('--load_path',
                     default='./results/nne/multi/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
                     help='Loading path, ex: logs/model/test.zip')
 parser.add_argument('--test_path',
-                    default='./results/nne/multi/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
+                    #default='./results/nne/multi/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
                     help='Testing path, ex: logs/model/test.zip')
 parser.add_argument('--steps', default=200000, help='Save model after X steps')
 parser.add_argument('--total_steps', default=200000, help='The total number of steps.')
@@ -74,6 +74,8 @@ def get_model(alg, env, tensorboard_log):
 
 
 def get_load_model(env, alg, tensorboard_log, load_path):
+    print("tesnor_path: ", load_path)
+    print("tesnsor Log : ",tensorboard_log)
     if alg == 'ppo':
         return PPO.load(load_path, reset_num_timesteps=False, verbose=1, tensorboard_log=tensorboard_log, n_steps=500)
     elif alg == 'recurrent_ppo':
@@ -206,7 +208,7 @@ def main():
     env = get_env(env_name, num_nodes, reward)
     print("env: {}".format(env))
 
-    tensorboard_log = "results/" + env_name + "/" + reward + "/"
+    tensorboard_log = "./results/" + env_name + "/" + reward + "/"
 
     name = alg + "_env_" + env_name + "_num_nodes_" + str(num_nodes) \
            + "_reward_" + reward + "_totalSteps_" + str(total_steps)
@@ -234,7 +236,8 @@ def main():
     # Testing selected
     if testing:
         if TESTING_FACTORS:
-            path = "data/train/v1/nodes/"
+            #path = "data/train/v1/nodes/"
+            path = "mydata/"
             factors = [1, 2, 4, 6, 8, 10, 12]
             i = 0
             for f in factors:
@@ -257,7 +260,9 @@ def main():
                                        path_csv_files=path,
                                        file_results_name=str(i) + '_nne_gym_num_nodes_' + str(
                                            num_nodes) + '_factor_' + str(f))
-
+                print("1 : ",tensorboard_log)
+                print("1 : ",alg)
+                print("1 : ",test_path)
                 model = get_load_model(env, alg, tensorboard_log, test_path)
                 test_model(model, env, n_episodes=100, n_steps=100, smoothing_window=5, fig_name=name + "_test_reward.png")
                 i += 1
