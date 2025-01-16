@@ -290,7 +290,7 @@ def calculate_qoe(sync, jerkiness, latnecy, vrsq = 0):
     # return qoe / 3.
     qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.) + (vrsq / 5.)
 
-    return latnecy / 5.
+    return qoe
 
 
 def simulate_model(dataframe, accuracy_rate, columns):

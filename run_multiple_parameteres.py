@@ -203,13 +203,16 @@ def test_model(model, env, n_episodes, n_steps, smoothing_window, fig_name):
     plt.ylabel("Reward")
     plt.savefig(fig_name, dpi=250, bbox_inches='tight')
     '''
+
+
 def main():
+    # Parameter ranges
     cost_weights = [1.0, 0.5, 0.2, 0.0]
     qoe_weights = [0.0, 0.5, 0.8, 1.0]
-    qoe_simulation_modes = ["Simulation"]  # Add "Real" if needed
+    qoe_simulation_modes = ["Simulation"]#, "Real"]
     qoe_accuracies = [0.7, 0.8, 1.0]
 
-    # Base parameters from args
+    # Base parameters
     alg = args.alg
     env_name = args.env_name
     reward = args.reward
@@ -218,64 +221,60 @@ def main():
     load_path = args.load_path
     training = args.training
     testing = args.testing
+    test_path = args.test_path
     steps = int(args.steps)
     total_steps = int(args.total_steps)
-    latency_weight = float(args.latency_weight) if hasattr(args, 'latency_weight') else 0.0
-    gini_weight = float(args.gini_weight) if hasattr(args, 'gini_weight') else 0.0
 
-    for cost_weight, qoe_weight in zip(cost_weights, qoe_weights):
-        for qoe_simulation_mode in qoe_simulation_modes:
-            for qoe_accuracy in qoe_accuracies:
-                print(f"Running with cost_weight={cost_weight}, qoe_weight={qoe_weight}, "
-                      f"qoe_simulation_mode={qoe_simulation_mode}, qoe_accuracy={qoe_accuracy}")
+    for cost_weight,  qoe_weight in zip(cost_weights,qoe_weights):
+            for qoe_simulation_mode in qoe_simulation_modes:
+                for qoe_accuracy in qoe_accuracies:
+                    print(f"Running with cost_weight={cost_weight}, qoe_weight={qoe_weight}, "
+                          f"qoe_simulation_mode={qoe_simulation_mode}, qoe_accuracy={qoe_accuracy}")
 
-                # Create environment with current parameters
-                env = get_env(
-                    env_name=env_name,
-                    num_nodes=num_nodes,
-                    reward_function=reward,
-                    qoe=args.qoe,
-                    objective=args.objective,
-                    simulation_mode=qoe_simulation_mode,
-                    qoe_accuracy=qoe_accuracy,
-                    latency_weight=latency_weight,  # Default or overridden
-                    cost_weight=cost_weight,
-                    gini_weight=gini_weight,        # Default or overridden
-                    qoe_weight=qoe_weight
-                )
-
-                tensorboard_log = f"./results/{env_name}/{reward}/" \
-                                  f"cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}/"
-
-                name = f"{alg}_env_{env_name}_cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}"
-
-                test_path = f"./results/{env_name}/{reward}/" \
-                            f"{name}/{name}.zip"
-
-                checkpoint_callback = CheckpointCallback(
-                    save_freq=steps,
-                    save_path=f"logs/{name}",
-                    name_prefix=name
-                )
-
-                if training:
-                    model = get_model(alg, env, tensorboard_log)
-                    model.learn(
-                        total_timesteps=total_steps,
-                        tb_log_name=f"{name}_run",
-                        callback=checkpoint_callback
+                    # Create environment with current parameters
+                    env = get_env(
+                        env_name=env_name,
+                        num_nodes=num_nodes,
+                        reward_function=reward,
+                        qoe=args.qoe,
+                        objective=args.objective,
+                        simulation_mode=qoe_simulation_mode,
+                        qoe_accuracy=qoe_accuracy,
+                        latency_weight=0.0,  # Adjust as needed
+                        cost_weight=cost_weight,
+                        gini_weight=0.0,  # Adjust as needed
+                        qoe_weight=qoe_weight
                     )
-                    model.save(name)
 
-                if testing:
-                    model = get_load_model(env, alg, tensorboard_log, test_path)
-                    test_model(
-                        model, env,
-                        n_episodes=100,
-                        n_steps=100,
-                        smoothing_window=5,
-                        fig_name=f"{name}_test_reward.png"
+                    tensorboard_log = f"./results/{env_name}/{reward}/" \
+                                      f"cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}/"
+
+                    name = f"{alg}_env_{env_name}_cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}"
+
+                    checkpoint_callback = CheckpointCallback(
+                        save_freq=steps,
+                        save_path=f"logs/{name}",
+                        name_prefix=name
                     )
+
+                    if training:
+                        model = get_model(alg, env, tensorboard_log)
+                        model.learn(
+                            total_timesteps=total_steps,
+                            tb_log_name=f"{name}_run",
+                            callback=checkpoint_callback
+                        )
+                        model.save(name)
+
+                    if testing:
+                        model = get_load_model(env, alg, tensorboard_log, test_path)
+                        test_model(
+                            model, env,
+                            n_episodes=100,
+                            n_steps=100,
+                            smoothing_window=5,
+                            fig_name=f"{name}_test_reward.png"
+                        )
 
 
 if __name__ == "__main__":

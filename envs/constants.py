@@ -6,7 +6,7 @@ ACTIONS = ["Deploy-Node", "Reject"]
 NAIVE = 'naive'
 
 # Cost defaults
-MAX_COST = 16  # Defined based on the max cost in DEFAULT_CLUSTER_TYPES
+MAX_COST = 64  # Defined based on the max cost in DEFAULT_CLUSTER_TYPES
 MIN_COST = 1  # Defined based on the min cost in DEFAULT_CLUSTER_TYPES
 
 # Multi-objective reward function

@@ -14,10 +14,7 @@ from envs.utils import DeploymentRequest, get_c2e_deployment_list, save_to_csv, 
     calculate_gini_coefficient, normalize, calculate_qoe, simulate_model, model_estimation
 
 from envs.constants import *
-# import glob
-# import math
-# import operator
-# import os
+
 
 
 class NNESchedulingEnv(gym.Env):
@@ -570,7 +567,7 @@ class NNESchedulingEnv(gym.Env):
                                  "were not available, do not penalize the agent...")
                     return 1
             else:  # Multi-objective reward function: latency + cost + gini + bandwidth
-                # Latency
+
                 #latency = self.deployment_request.expected_rtt + self.deployment_request.expected_access_latency + self.deployment_request.expected_processing_latency
                 latency = self.deployment_request.expected_access_latency + self.deployment_request.expected_processing_latency
                 logging.info('[Multi Reward] Latency components:  Lat: {} | Processing: {}'.format(
