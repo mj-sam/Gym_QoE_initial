@@ -288,9 +288,9 @@ def calculate_qoe(sync, jerkiness, latnecy, vrsq = 0):
         """
     # qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.) + (vrsq / 5.)
     # return qoe / 3.
-    qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.) + (vrsq / 5.)
+    qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.)
 
-    return qoe
+    return qoe / 3.0
 
 
 def simulate_model(dataframe, accuracy_rate, columns):
@@ -356,6 +356,6 @@ def model_estimation(dataframe, columns):
             raise ValueError(f"Prediction column {prediction_column} not found in the dataframe.")
 
         # Copy prediction values to simulated column
-        estimated_df[simulated_column] = estimated_df[prediction_column]
-
+        estimated_df[f"{column}_for_agent"]= estimated_df[prediction_column]
+    print(estimated_df.shape)
     return estimated_df

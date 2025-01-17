@@ -39,7 +39,7 @@ parser.add_argument('--test_path',
 parser.add_argument('--steps', default=200000, help='Save model after X steps')
 parser.add_argument('--total_steps', default=200000, help='The total number of steps.')
 
-parser.add_argument('--qoe', default=False, help='If qoe estimation is present in the observation space.')
+parser.add_argument('--qoe', default=True, help='If qoe estimation is present in the observation space.')
 parser.add_argument('--objective', default=False, help='If objective features are present in the observation space.')
 parser.add_argument('--simulation_mode', default="Simulation", help='Simulation mode : Real or Simulation. Default: Simulation.')
 parser.add_argument('--qoe_accuracy', default= 1.0 , help='qoe model accuracy simulation')
@@ -204,12 +204,9 @@ def test_model(model, env, n_episodes, n_steps, smoothing_window, fig_name):
     plt.savefig(fig_name, dpi=250, bbox_inches='tight')
     '''
 def main():
-    cost_weights = [1.0, 0.5, 0.2, 0.0]
-    qoe_weights = [0.0, 0.5, 0.8, 1.0]
-    qoe_simulation_modes = ["Simulation"]  # Add "Real" if needed
-    qoe_accuracies = [0.7, 0.8, 1.0]
+    # Import and initialize Environment
+    logging.info(args)
 
-    # Base parameters from args
     alg = args.alg
     env_name = args.env_name
     reward = args.reward
@@ -218,64 +215,83 @@ def main():
     load_path = args.load_path
     training = args.training
     testing = args.testing
+    test_path = args.test_path
+
     steps = int(args.steps)
     total_steps = int(args.total_steps)
-    latency_weight = float(args.latency_weight) if hasattr(args, 'latency_weight') else 0.0
-    gini_weight = float(args.gini_weight) if hasattr(args, 'gini_weight') else 0.0
 
-    for cost_weight, qoe_weight in zip(cost_weights, qoe_weights):
-        for qoe_simulation_mode in qoe_simulation_modes:
-            for qoe_accuracy in qoe_accuracies:
-                print(f"Running with cost_weight={cost_weight}, qoe_weight={qoe_weight}, "
-                      f"qoe_simulation_mode={qoe_simulation_mode}, qoe_accuracy={qoe_accuracy}")
+    cost_weight = 0.0
+    qoe_weight = 1.0
+    simulation_mode = "Real"  # Add "Real" if needed
+    qoe_accuracy = 1.0
+    objective = True
+    qoe = True
 
-                # Create environment with current parameters
-                env = get_env(
-                    env_name=env_name,
-                    num_nodes=num_nodes,
-                    reward_function=reward,
-                    qoe=args.qoe,
-                    objective=args.objective,
-                    simulation_mode=qoe_simulation_mode,
-                    qoe_accuracy=qoe_accuracy,
-                    latency_weight=latency_weight,  # Default or overridden
-                    cost_weight=cost_weight,
-                    gini_weight=gini_weight,        # Default or overridden
-                    qoe_weight=qoe_weight
-                )
 
-                tensorboard_log = f"./results/{env_name}/{reward}/" \
-                                  f"cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}/"
+    env = get_env(env_name, num_nodes, reward, qoe, objective, simulation_mode, qoe_accuracy, 0, cost_weight, 0, qoe_weight)
+    print("env: {}".format(env))
 
-                name = f"{alg}_env_{env_name}_cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}"
+    tensorboard_log = "./results/" + env_name + "/" + reward + "/"
 
-                test_path = f"./results/{env_name}/{reward}/" \
-                            f"{name}/{name}.zip"
+    name = alg + "_env_" + env_name + "_num_nodes_" + str(num_nodes) \
+           + "_reward_" + reward + "_totalSteps_" + str(total_steps)
 
-                checkpoint_callback = CheckpointCallback(
-                    save_freq=steps,
-                    save_path=f"logs/{name}",
-                    name_prefix=name
-                )
+    # callback: does not work with multiple envs
+    checkpoint_callback = CheckpointCallback(save_freq=steps, save_path="logs/" + name, name_prefix=name)
 
-                if training:
-                    model = get_model(alg, env, tensorboard_log)
-                    model.learn(
-                        total_timesteps=total_steps,
-                        tb_log_name=f"{name}_run",
-                        callback=checkpoint_callback
-                    )
-                    model.save(name)
+    # Training selected
+    if training:
+        if loading:  # resume training
+            model = get_load_model(alg, tensorboard_log, load_path)
+            model.set_env(env)
+            model.learn(total_timesteps=total_steps, tb_log_name=name + "_run", callback=checkpoint_callback)
+        else:
+            if alg == "ppo_deepsets" or alg == 'dqn_deepsets':
+                model = get_model(alg, env, tensorboard_log)
+                print("model: {}".format(model))
+                model.learn(total_timesteps=total_steps)
+            else:
+                model = get_model(alg, env, tensorboard_log)
+                model.learn(total_timesteps=total_steps, tb_log_name=name + "_run", callback=checkpoint_callback)
 
-                if testing:
-                    model = get_load_model(env, alg, tensorboard_log, test_path)
-                    test_model(
-                        model, env,
-                        n_episodes=100,
-                        n_steps=100,
-                        smoothing_window=5,
-                        fig_name=f"{name}_test_reward.png"
-                    )
+        model.save(name)
+
+    # Testing selected
+    if testing:
+        if TESTING_FACTORS:
+            #path = "data/train/v1/nodes/"
+            path = "mydata/"
+            factors = [1, 2, 4, 6, 8, 10, 12]
+            i = 0
+            for f in factors:
+                env = NNESchedulingEnv(num_nodes=num_nodes,
+                                       arrival_rate_r=100, call_duration_r=1,
+                                       episode_length=100,
+                                       reward_function='multi',
+                                       factor=f,
+                                       path_csv_files=path,
+                                       file_results_name=str(i) + '_nne_gym_num_nodes_' + str(
+                                           num_nodes) + '_factor_' + str(f))
+                env.reset()
+                _, _, _, info = env.step(0)
+                info_keywords = tuple(info.keys())
+                env = NNESchedulingEnv(num_nodes=num_nodes,
+                                       arrival_rate_r=100, call_duration_r=1,
+                                       episode_length=100,
+                                       reward_function='multi',
+                                       factor=f,
+                                       path_csv_files=path,
+                                       file_results_name=str(i) + '_nne_gym_num_nodes_' + str(
+                                           num_nodes) + '_factor_' + str(f))
+                print("1 : ",tensorboard_log)
+                print("1 : ",alg)
+                print("1 : ",test_path)
+                model = get_load_model(env, alg, tensorboard_log, test_path)
+                test_model(model, env, n_episodes=100, n_steps=100, smoothing_window=5, fig_name=name + "_test_reward.png")
+                i += 1
+        else:
+            model = get_load_model(env, alg, tensorboard_log, test_path)
+            test_model(model, env, n_episodes=100, n_steps=100, smoothing_window=5, fig_name=name + "_test_reward.png")
 
 
 if __name__ == "__main__":

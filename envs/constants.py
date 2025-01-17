@@ -99,12 +99,19 @@ DF_COLUMN_JERKINESS_BINARY = "Jerkiness_for_agent"
 DF_COLUMN_SYNC = "Sync"
 DF_COLUMN_SYNC_BINARY = "Sync_for_agent"
 
-DF_COLUMN_THROUPUT_DL = "throuput_mean_in"
-DF_COLUMN_THROUPUT_UL = "throuput_mean_out"
-DF_COLUMN_PACKETSIZE_DL = "avg_packet_size_in"
-DF_COLUMN_PACKETSIZE_UL = "avg_packet_size_out"
-DF_COLUMN_INTERARRIVALTIME_DL = "inter_arrival_times_avg_in"
-DF_COLUMN_INTERARRIVALTIME_UL = "inter_arrival_times_avg_out"
+# DF_COLUMN_THROUPUT_DL = "throuput_mean_in"
+# DF_COLUMN_THROUPUT_UL = "throuput_mean_out"
+# DF_COLUMN_PACKETSIZE_DL = "avg_packet_size_in"
+# DF_COLUMN_PACKETSIZE_UL = "avg_packet_size_out"
+# DF_COLUMN_INTERARRIVALTIME_DL = "inter_arrival_times_avg_in"
+# DF_COLUMN_INTERARRIVALTIME_UL = "inter_arrival_times_avg_out"
+
+DF_COLUMN_THROUPUT_DL = "throuput_median"
+DF_COLUMN_THROUPUT_UL = "avg_packet_size"
+DF_COLUMN_PACKETSIZE_DL = "inter_arrival_times_avg"
+DF_COLUMN_PACKETSIZE_UL = "std_packet_size"
+DF_COLUMN_INTERARRIVALTIME_DL = "inter_arrival_times_skew"
+DF_COLUMN_INTERARRIVALTIME_UL = "throuput_kurt"
 
 # Dataframe column names For PHYSIOLOGICAL assessment
 

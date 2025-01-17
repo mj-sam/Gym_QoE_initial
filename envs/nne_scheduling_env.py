@@ -68,10 +68,12 @@ class NNESchedulingEnv(gym.Env):
         # -------------------------------------------------------
         # ------------- observation configuration ----------------
         self.feature_count = NUM_METRICS_NODES  # Base features
+
         if self.qoe_in_observation:
             self.feature_count  += 3  # Adding latency, jerkiness, sync
+
         if self.objective_feature_in_observation:
-            self.feature_count  += 6  # Adding throughput, packet size, interarrival times
+            self.feature_count  += 4  # Adding throughput, packet size, interarrival times
 
         #-------------------------------------------------------
         #------------- simulation configuration ----------------
@@ -473,6 +475,7 @@ class NNESchedulingEnv(gym.Env):
             total_latency = mean(self.avg_total_latency)
             avg_proc = mean(self.avg_processing_latency)
 
+        qoe = calculate_qoe(avg_sync_q, avg_latency_q, avg_jerkiness_q)
         self.info = {
             "reward_step": float("{:.2f}".format(reward)),
             "action": float("{:.2f}".format(action)),
@@ -484,16 +487,17 @@ class NNESchedulingEnv(gym.Env):
             'avg_access_latency': float("{:.2f}".format(avg_l)),
             'avg_processing_latency': float("{:.2f}".format(avg_proc)),
             #----------------
-            'avg_throuput_in': float("{:.2f}".format(avg_throuput_in)),
-            'avg_packetsize_in': float("{:.2f}".format(avg_packetsize_in)),
-            'avg_interarrival_in': float("{:.2f}".format(avg_interarrival_in)),
-            'avg_throuput_out': float("{:.2f}".format(avg_throuput_out)),
-            'avg_packetsize_out': float("{:.2f}".format(avg_packetsize_out)),
-            'avg_interarrival_out': float("{:.2f}".format(avg_interarrival_out)),
-            'avg_latency_binary': float("{:.2f}".format(avg_latency_binary)),
-            'avg_jerkiness_binary': float("{:.2f}".format(avg_jerkiness_binary)),
-            'avg_sync_binary': float("{:.2f}".format(avg_sync_binary)),
+            # 'avg_throuput_in': float("{:.2f}".format(avg_throuput_in)),
+            # 'avg_packetsize_in': float("{:.2f}".format(avg_packetsize_in)),
+            # 'avg_interarrival_in': float("{:.2f}".format(avg_interarrival_in)),
+            # 'avg_throuput_out': float("{:.2f}".format(avg_throuput_out)),
+            # 'avg_packetsize_out': float("{:.2f}".format(avg_packetsize_out)),
+            # 'avg_interarrival_out': float("{:.2f}".format(avg_interarrival_out)),
+            # 'avg_latency_binary': float("{:.2f}".format(avg_latency_binary)),
+            # 'avg_jerkiness_binary': float("{:.2f}".format(avg_jerkiness_binary)),
+            # 'avg_sync_binary': float("{:.2f}".format(avg_sync_binary)),
             #--------------------------------
+            'qoe': float("{:.2f}".format(qoe)),
             'gini': float("{:.2f}".format(calculate_gini_coefficient(self.avg_load_served_per_provider))),
             'executionTime': float("{:.2f}".format(self.execution_time))
         }
@@ -753,8 +757,8 @@ class NNESchedulingEnv(gym.Env):
                 self.throuput_out,
                 self.packetsize_in,
                 self.packetsize_out,
-                self.interarrival_in,
-                self.interarrival_out
+                #self.interarrival_in,
+                #self.interarrival_out
             ], axis=1)
             base_observation = np.concatenate([base_observation, objective_observation], axis=1)
 
