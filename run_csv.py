@@ -12,6 +12,7 @@ from envs.nne_scheduling_env import NNESchedulingEnv
 from envs.ppo_deepset import PPO_DeepSets
 from envs.dqn_deepset import DQN_DeepSets
 from sb3_contrib.common.maskable.utils import get_action_masks
+import pandas as pd
 
 matplotlib.use('TkAgg')
 
@@ -35,8 +36,8 @@ parser.add_argument('--load_path',
 parser.add_argument('--test_path',
                     #default='./results/nne/multi/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
                     help='Testing path, ex: logs/model/test.zip')
-parser.add_argument('--steps', default=200000, help='Save model after X steps')
-parser.add_argument('--total_steps', default=200000, help='The total number of steps.')
+parser.add_argument('--steps', default=200, help='Save model after X steps')
+parser.add_argument('--total_steps', default=200, help='The total number of steps.')
 
 parser.add_argument('--qoe', default=False, help='If qoe estimation is present in the observation space.')
 parser.add_argument('--objective', default=False, help='If objective features are present in the observation space.')
@@ -208,15 +209,9 @@ def test_model(model, env, n_episodes, n_steps, smoothing_window, fig_name):
 
 def main():
     # Parameter ranges
-    latency_weights = [0.0, 0.5, 1.0]
-    gini_weights = [0.0, 0.5, 1.0]
-    cost_weights = [1.0, 0.5, 0.2, 0.0]
-    qoe_weights = [0.0, 0.5, 0.8, 1.0]
-    include_objective = [True, False]
-    include_qoe = [True, False]
-
-    qoe_simulation_modes = ["Real", "Simulation","Simulation","Simulation"]
-    qoe_accuracies = [0.0, 0.7, 0.8, 1.0]
+    # Load configuration from CSV
+    config_path = './execution_config.csv'
+    config_data = pd.read_csv(config_path)
 
     # Base parameters
     alg = args.alg
@@ -233,65 +228,89 @@ def main():
     test_trained_model = args.test_trained_model
 
     if training:
-        # Loop through combinations
-        for obj_included in include_objective:
-            for qoe_included in include_qoe:
-                for cost_weight,  qoe_weight in zip(cost_weights,qoe_weights):
-                        for qoe_simulation_mode , qoe_accuracy in zip(qoe_simulation_modes, qoe_accuracies):
-                                print(f"Running with cost_weight={cost_weight}, qoe_weight={qoe_weight}, "
-                                      f"qoe_simulation_mode={qoe_simulation_mode}, qoe_accuracy={qoe_accuracy}")
+        # Loop through configurations from CSV
+        for _, config in config_data.iterrows():
+            obj_included = bool(config['objective_included'])
+            qoe_included = bool(config['qoe_included'])
+            cost_weight = config['cost_weights']
+            qoe_weight = config['qoe_weights']
+            qoe_simulation_mode = config['qoe_simulation_modes']
+            qoe_accuracy = config['qoe_accuracies']
+            latency_weight = config['latency_weights']
+            gini_weight = config['gini_weights']
 
-                                name = f"{alg}_env_{env_name}_qoe_{qoe_included}_obj_{obj_included}_cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}"
+            # Create a dynamic name for each configuration
+            name = f"{alg}_env_{env_name}_qoe_{qoe_included}_obj_{obj_included}_cw_{cost_weight}_qw_{qoe_weight}_lw_{latency_weight}_gw_{gini_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}"
 
-                                # Create environment with current parameters
-                                env = get_env(
-                                    env_name=env_name,
-                                    num_nodes=num_nodes,
-                                    reward_function=reward,
-                                    qoe= qoe_included,
-                                    objective=obj_included,
-                                    simulation_mode=qoe_simulation_mode,
-                                    qoe_accuracy=qoe_accuracy,
-                                    latency_weight=0.0,  # Adjust as needed
-                                    cost_weight=cost_weight,
-                                    gini_weight=0.0,  # Adjust as needed
-                                    qoe_weight=qoe_weight,
-                                    file_results_name= './run_metrics/'+name+'.csv'
-                                )
+            print("alg : ", alg, "env_name : ", env_name, "cost_weight : ", cost_weight, "qoe_weight : ", qoe_weight, "qoe_simulation_mode : ", qoe_simulation_mode, "qoe_accuracy : ", qoe_accuracy, "latency_weight : ", latency_weight, "gini_weight : ", gini_weight, "qoe_included : ", qoe_included, "obj_included : ", obj_included)
 
-                                tensorboard_log = f"./results/{env_name}/{reward}/" \
-                                                  f"qoe_{qoe_included}_obj_{obj_included}_cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}/"
+            # Create environment with current parameters
+            env = get_env(
+                env_name=env_name,
+                num_nodes=num_nodes,
+                reward_function=reward,
+                qoe=qoe_included,
+                objective=obj_included,
+                simulation_mode=qoe_simulation_mode,
+                qoe_accuracy=qoe_accuracy,
+                latency_weight=latency_weight,
+                cost_weight=cost_weight,
+                gini_weight=gini_weight,
+                qoe_weight=qoe_weight,
+                file_results_name='./run_metrics/' + name + '.csv'
+            )
+
+            tensorboard_log = f"./results/{env_name}/{reward}/" \
+                              f"qoe_{qoe_included}_obj_{obj_included}_cw_{cost_weight}_qw_{qoe_weight}_lw_{latency_weight}_gw_{gini_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}/"
+
+            checkpoint_callback = CheckpointCallback(
+                save_freq=steps,
+                save_path=f"logs/{name}",
+                name_prefix=name
+            )
+
+            # Training logic
+            if training:
+                model = get_model(alg, env, tensorboard_log)
+                model.learn(
+                    total_timesteps=total_steps,
+                    tb_log_name=f"{name}_run",
+                    callback=checkpoint_callback
+                )
+                model.save("./models/" + name)
+
+            # Testing logic
+            if testing:
+                # Create environment with current parameters
+                env = get_env(
+                    env_name=env_name,
+                    num_nodes=num_nodes,
+                    reward_function=reward,
+                    qoe=qoe_included,
+                    objective=obj_included,
+                    simulation_mode=qoe_simulation_mode,
+                    qoe_accuracy=qoe_accuracy,
+                    latency_weight=latency_weight,
+                    cost_weight=cost_weight,
+                    gini_weight=gini_weight,
+                    qoe_weight=qoe_weight,
+                    file_results_name='./run_metrics_test/' + name + '.csv'
+                )
 
 
-
-                                checkpoint_callback = CheckpointCallback(
-                                    save_freq=steps,
-                                    save_path=f"logs/{name}",
-                                    name_prefix=name
-                                )
-
-                                if training:
-                                    model = get_model(alg, env, tensorboard_log)
-                                    model.learn(
-                                        total_timesteps=total_steps,
-                                        tb_log_name=f"{name}_run",
-                                        callback=checkpoint_callback
-                                    )
-                                    model.save("./models/"+name)
-
-                                if testing:
-                                    model = get_load_model(env, alg, tensorboard_log, "./models/"+ name)
-                                    test_model(
-                                        model, env,
-                                        n_episodes=100,
-                                        n_steps=100,
-                                        smoothing_window=5,
-                                        fig_name=f"{name}_test_reward.png"
-                                    )
+                model = get_load_model(env, alg, tensorboard_log, "./models/" + name)
+                test_model(
+                    model, env,
+                    n_episodes=100,
+                    n_steps=100,
+                    smoothing_window=5,
+                    fig_name=f"{name}_test_reward.png"
+                )
     if test_trained_model:
         # Define the pattern to extract values
         #pattern = r"(?P<alg>.+)_env_(?P<env_name>.+)_cw_(?P<cost_weight>.+)_qw_(?P<qoe_weight>.+)_sim_(?P<qoe_simulation_mode>.+)_acc_(?P<qoe_accuracy>.+)"
-        pattern = r"(?P<alg>.+)_env_(?P<env_name>.+)_qoe_(?P<qoe_included>.+)_obj_(?P<obj_included>.+)_cw_(?P<cost_weight>.+)_qw_(?P<qoe_weight>.+)_sim_(?P<qoe_simulation_mode>.+)_acc_(?P<qoe_accuracy>.+)"
+        #pattern = r"(?P<alg>.+)_env_(?P<env_name>.+)_qoe_(?P<qoe_included>.+)_obj_(?P<obj_included>.+)_cw_(?P<cost_weight>.+)_qw_(?P<qoe_weight>.+)_sim_(?P<qoe_simulation_mode>.+)_acc_(?P<qoe_accuracy>.+)"
+        pattern = r"(?P<alg>.+)_env_(?P<env_name>.+)_qoe_(?P<qoe_included>.+)_obj_(?P<obj_included>.+)_cw_(?P<cost_weight>.+)_qw_(?P<qoe_weight>.+)_lw_(?P<latency_weight>.+)_gw_(?P<gini_weight>.+)_sim_(?P<qoe_simulation_mode>.+)_acc_(?P<qoe_accuracy>.+)"
 
         name = test_path.split('/')[-1]
         # Match the pattern
@@ -306,25 +325,29 @@ def main():
             qoe_weight = float(values["qoe_weight"])
             qoe_simulation_mode = values["qoe_simulation_mode"]
             qoe_accuracy = float(values["qoe_accuracy"])
-
+            latency_weight = float(values["latency_weight"])
+            gini_weight = float(values["gini_weight"])
+            qoe_included = bool(values["qoe_included"])
+            obj_included = bool(values["obj_included"])
+            print("alg : ", alg, "env_name : ", env_name, "cost_weight : ", cost_weight, "qoe_weight : ", qoe_weight, "qoe_simulation_mode : ", qoe_simulation_mode, "qoe_accuracy : ", qoe_accuracy, "latency_weight : ", latency_weight, "gini_weight : ", gini_weight, "qoe_included : ", qoe_included, "obj_included : ", obj_included)
             # Create environment with current parameters
             env = get_env(
                 env_name=env_name,
                 num_nodes=num_nodes,
                 reward_function=reward,
-                qoe=args.qoe,
-                objective=args.objective,
+                qoe=qoe_included,
+                objective=obj_included,
                 simulation_mode=qoe_simulation_mode,
                 qoe_accuracy=qoe_accuracy,
-                latency_weight=0.0,  # Adjust as needed
+                latency_weight=latency_weight,
                 cost_weight=cost_weight,
-                gini_weight=0.0,  # Adjust as needed
+                gini_weight=gini_weight,
                 qoe_weight=qoe_weight,
-                file_results_name='./run_metrics/' + name + '.csv'
+                file_results_name='./run_metrics_test/' + name + '.csv'
             )
 
             tensorboard_log = f"./results/{env_name}/{reward}/" \
-                              f"cw_{cost_weight}_qw_{qoe_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}/"
+                              f"qoe_{qoe_included}_obj_{obj_included}_cw_{cost_weight}_qw_{qoe_weight}_lw_{latency_weight}_gw_{gini_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}/"
 
             checkpoint_callback = CheckpointCallback(
                 save_freq=steps,
