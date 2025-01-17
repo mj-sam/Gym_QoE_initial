@@ -1,3 +1,4 @@
+
 import csv
 import heapq
 import time
@@ -120,11 +121,11 @@ class NNESchedulingEnv(gym.Env):
         self.deployment_request = None
 
         #for test remove this later
-        order = [0, 1, 2, 3]
-        np.random.shuffle(order)
+        # order = [0, 1, 2, 3]
+        # np.random.shuffle(order)
 
         logging.info("[Init] Resource Capacities... ")
-        self.initialize_resources(order)
+        self.initialize_resources()
 
 
 
@@ -137,7 +138,7 @@ class NNESchedulingEnv(gym.Env):
         self.df_node_selected_rows = []
         self.selected_ts = None
 
-        self.intialize_node(order)
+        self.intialize_node()
 
         # Choose a random timestamp to start Episode
         self.get_start_index()
@@ -166,8 +167,8 @@ class NNESchedulingEnv(gym.Env):
         self.file_results = file_results_name + ".csv"
         self.obs_csv = self.name + "_obs.csv"
 
-    def initialize_resources(self, order):
-        np.random.shuffle(order)
+    def initialize_resources(self):
+        #np.random.shuffle(order)
         # New: Resource capacities based on node type
         self.cpu_capacity = np.zeros(self.total_number)
         self.memory_capacity = np.zeros(self.total_number)
@@ -279,13 +280,13 @@ class NNESchedulingEnv(gym.Env):
         self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
 
 
-    def intialize_node(self, order):
+    def intialize_node(self):
         j = 0
         #print(distributed)
-        np.random.shuffle(order)
+        #np.random.shuffle(order)
 
         for n in range(self.num_nodes):
-            config_random = order[n]
+            config_random = np.random.randint(0, 3, dtype=int)
             #print(config_random)
             S = self.file_df[self.file_df['Config'] == SERVER_TYPES[config_random]]
             self.server_type_id[n] = config_random
@@ -358,8 +359,8 @@ class NNESchedulingEnv(gym.Env):
         self.selected_ts = None
         #==================================================
         # for test remove this later
-        order = [0, 1, 2, 3]
-        np.random.shuffle(order)
+        #order = [0, 1, 2, 3]
+        #np.random.shuffle(order)
         #=================================================
 
         self.initialize_avg_metrics()
@@ -367,9 +368,9 @@ class NNESchedulingEnv(gym.Env):
         self.deploymentList = get_c2e_deployment_list()
         self.initialize_metrics_arrays()
         logging.info("[Reset] Resource Capacities... ")
-        self.initialize_resources(order)
+        self.initialize_resources()
 
-        self.intialize_node(order)
+        self.intialize_node()
 
         # Choose a random index to start Episode
         self.get_start_index()
@@ -424,7 +425,6 @@ class NNESchedulingEnv(gym.Env):
 
         if (len(self.avg_access_latency) == 0 \
                 and len(self.avg_deployment_cost) == 0 \
-
                 and len(self.avg_throuput_in) == 0 \
                 and len(self.avg_packetsize_in) == 0 \
                 and len(self.avg_interarrival_in) == 0 \
