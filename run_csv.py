@@ -36,8 +36,8 @@ parser.add_argument('--load_path',
 parser.add_argument('--test_path',
                     #default='./results/nne/multi/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000_run_1/mask_ppo_env_nne_num_nodes_4_reward_multi_totalSteps_200000.zip',
                     help='Testing path, ex: logs/model/test.zip')
-parser.add_argument('--steps', default=200, help='Save model after X steps')
-parser.add_argument('--total_steps', default=200, help='The total number of steps.')
+parser.add_argument('--steps', default=200000, help='Save model after X steps')
+parser.add_argument('--total_steps', default=200000, help='The total number of steps.')
 
 parser.add_argument('--qoe', default=False, help='If qoe estimation is present in the observation space.')
 parser.add_argument('--objective', default=False, help='If objective features are present in the observation space.')
@@ -212,7 +212,7 @@ def main():
     # Load configuration from CSV
     config_path = './execution_config.csv'
     config_data = pd.read_csv(config_path)
-
+    config_data.drop_duplicates(inplace=True)
     # Base parameters
     alg = args.alg
     env_name = args.env_name

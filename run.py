@@ -221,14 +221,16 @@ def main():
     total_steps = int(args.total_steps)
 
     cost_weight = 0.0
-    qoe_weight = 1.0
+    qoe_weight = 0.0
     simulation_mode = "Real"  # Add "Real" if needed
     qoe_accuracy = 1.0
+    latency_weight = 0.5
+    gini_weight = 0.5
     objective = True
     qoe = True
 
 
-    env = get_env(env_name, num_nodes, reward, qoe, objective, simulation_mode, qoe_accuracy, 0, cost_weight, 0, qoe_weight)
+    env = get_env(env_name, num_nodes, reward, qoe, objective, simulation_mode, qoe_accuracy, latency_weight, cost_weight, gini_weight, qoe_weight)
     print("env: {}".format(env))
 
     tensorboard_log = "./results/" + env_name + "/" + reward + "/"
@@ -270,6 +272,7 @@ def main():
                                        reward_function='multi',
                                        factor=f,
                                        path_csv_files=path,
+                                       latency_weight = latency_weight,
                                        file_results_name=str(i) + '_nne_gym_num_nodes_' + str(
                                            num_nodes) + '_factor_' + str(f))
                 env.reset()
