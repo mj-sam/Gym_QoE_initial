@@ -596,7 +596,7 @@ class NNESchedulingEnv(gym.Env):
                 logging.info(
                     '[Multi Reward] latency: {} | gini: {} | cost: {} | qoe: {}| '.format(latency, gini, cost,qoe))
 
-                latency = normalize(latency, MIN_RTT + MIN_LATENCY + MIN_PROC, MAX_RTT + MAX_LATENCY + MAX_PROC)
+                latency = normalize(latency,  MIN_LATENCY + MIN_PROC,  MAX_LATENCY + MAX_PROC)
                 cost = normalize(cost, MIN_COST, MAX_COST)
                 #bandwidth = normalize(bandwidth, MIN_DL + MIN_UL, MAX_DL + MAX_UL)
                 #qoe = normalize(qoe, 0, 15)
