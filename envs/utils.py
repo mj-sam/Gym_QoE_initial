@@ -5,6 +5,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import logging
+from sklearn.preprocessing import MinMaxScaler
 
 
 # DeploymentRequest Info
@@ -359,3 +360,12 @@ def model_estimation(dataframe, columns):
         estimated_df[f"{column}_for_agent"]= estimated_df[prediction_column]
     print(estimated_df.shape)
     return estimated_df
+
+# Function to normalize columns with individual scalers
+def normalize_columns_individually(df, columns):
+    scalers = {}
+    for col in columns:
+        scaler = MinMaxScaler()
+        df[col] = scaler.fit_transform(df[[col]])  # Fit and transform the column
+        scalers[col] = scaler  # Save the scaler for potential reuse
+    return df

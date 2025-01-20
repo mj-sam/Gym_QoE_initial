@@ -12,7 +12,7 @@ from gym.utils import seeding
 from statistics import mean
 from datetime import datetime, timedelta
 from envs.utils import DeploymentRequest, get_c2e_deployment_list, save_to_csv, sort_dict_by_value, \
-    calculate_gini_coefficient, normalize, calculate_qoe, simulate_model, model_estimation
+    calculate_gini_coefficient, normalize, calculate_qoe, simulate_model, model_estimation, normalize_columns_individually
 
 from envs.constants import *
 
@@ -87,7 +87,8 @@ class NNESchedulingEnv(gym.Env):
             logging.info("Invalid QoE Simulation Mode")
             raise Exception("Invalid QoE Simulation Mode")
 
-
+        self.file_df = normalize_columns_individually(self.file_df,
+                                                               [DF_COLUMN_LATENCY, DF_COLUMN_JERKINESS, DF_COLUMN_SYNC])
 
         #Initialize variables
         self.initialize_rewards(latency_weight, gini_weight, cost_weight, qoe_weight)
