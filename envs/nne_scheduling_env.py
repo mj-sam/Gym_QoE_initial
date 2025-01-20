@@ -87,14 +87,15 @@ class NNESchedulingEnv(gym.Env):
             logging.info("Invalid QoE Simulation Mode")
             raise Exception("Invalid QoE Simulation Mode")
 
+
+
         #Initialize variables
         self.initialize_rewards(latency_weight, gini_weight, cost_weight, qoe_weight)
         self.initialize_avg_metrics()
-        self.processing_latency = np.zeros(self.total_number)
-        self.node_id = np.zeros(self.total_number)
-        self.server_type_id = np.zeros(self.total_number)
         self.initialize_metrics_arrays()
 
+        self.node_id = np.zeros(self.total_number)
+        self.server_type_id = np.zeros(self.total_number)
 
         #Defined as a matrix having as rows the nodes and columns their associated metrics
         self.observation_space = spaces.Box(low=MIN_OBS,
@@ -278,7 +279,7 @@ class NNESchedulingEnv(gym.Env):
         self.total_latency = []
         self.avg_deployment_cost = []
         self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
-
+        self.processing_latency = np.zeros(self.total_number)
 
     def intialize_node(self):
         j = 0
