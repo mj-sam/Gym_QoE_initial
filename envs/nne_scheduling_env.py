@@ -279,7 +279,8 @@ class NNESchedulingEnv(gym.Env):
         self.avg_access_latency = []
         self.total_latency = []
         self.avg_deployment_cost = []
-        self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
+        self.avg_load_served_per_provider = np.zeros(self.total_number)
+        #self.avg_load_served_per_provider = np.zeros(NUM_SERVER_TYPE)
         self.processing_latency = np.zeros(self.total_number)
 
     def intialize_node(self):
@@ -599,7 +600,7 @@ class NNESchedulingEnv(gym.Env):
                 latency = normalize(latency,  MIN_LATENCY + MIN_PROC,  MAX_LATENCY + MAX_PROC)
                 cost = normalize(cost, MIN_COST, MAX_COST)
                 #bandwidth = normalize(bandwidth, MIN_DL + MIN_UL, MAX_DL + MAX_UL)
-                #qoe = normalize(qoe, 0, 15)
+                qoe = normalize(qoe, 0, 15)
 
                 reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (1 - cost) + self.qoe_weight *  (1 - qoe)
 
@@ -654,7 +655,8 @@ class NNESchedulingEnv(gym.Env):
                 self.processing_latency[action] += PROCESSING_DELAY
 
                 type_id = self.node_type[action]
-                self.avg_load_served_per_provider[int(self.server_type_id[action])] += 1
+                #self.avg_load_served_per_provider[int(self.server_type_id[action])] += 1
+                self.avg_load_served_per_provider[int(self.node_id[action])] += 1
                 self.deployment_request.deployed_node = self.node_id[action]
                 self.deployment_request.action_id = action
                 self.deployment_request.deployed_provider = self.server_type_id[action]
