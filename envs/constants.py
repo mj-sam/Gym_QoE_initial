@@ -89,6 +89,9 @@ PROCESSING_DELAY = 2.0  # 2.0 ms
 MIN_PROC = 0.0
 MAX_PROC = 200.0  # 2.0 * 100 steps = 200.0 ms
 
+MIN_QOE = 0.0
+MAX_QOE = 12.0
+
 # Dataframe column names For OBJECTIVE assessment
 DF_COLUMN_LATENCY = "Latency"
 DF_COLUMN_LATENCY_BINARY = "Latency_for_agent"

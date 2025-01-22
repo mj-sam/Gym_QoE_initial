@@ -88,7 +88,7 @@ class NNESchedulingEnv(gym.Env):
             raise Exception("Invalid QoE Simulation Mode")
 
         self.file_df = normalize_columns_individually(self.file_df,
-                                                               [DF_COLUMN_LATENCY, DF_COLUMN_JERKINESS, DF_COLUMN_SYNC])
+                                                               [DF_COLUMN_THROUPUT_DL, DF_COLUMN_THROUPUT_UL, DF_COLUMN_PACKETSIZE_DL])
 
         #Initialize variables
         self.initialize_rewards(latency_weight, gini_weight, cost_weight, qoe_weight)
@@ -289,7 +289,7 @@ class NNESchedulingEnv(gym.Env):
         #np.random.shuffle(order)
 
         for n in range(self.num_nodes):
-            config_random = np.random.randint(0, 3, dtype=int)
+            config_random = np.random.randint(0, 3, dtype=int) # for server type A B C D
             #print(config_random)
             S = self.file_df[self.file_df['Config'] == SERVER_TYPES[config_random]]
             self.server_type_id[n] = config_random
@@ -533,14 +533,16 @@ class NNESchedulingEnv(gym.Env):
                 'avg_throuput_out': round(mean(self.avg_throuput_out), 2),
                 'avg_packetsize_out': round(mean(self.avg_packetsize_out), 2),
                 'avg_interarrival_out': round(mean(self.avg_interarrival_out), 2),
-                'avg_latency_binary': round(mean(self.avg_latency_binary), 3),
-                'avg_jerkiness_binary': round(mean(self.avg_jerkiness_binary), 3),
-                'avg_sync_binary': round(mean(self.avg_sync_binary), 3),
+                'avg_latency': round(mean(self.avg_latency_q), 3),
+                'avg_jerkiness': round(mean(self.avg_jerkiness_q), 3),
+                'avg_sync': round(mean(self.avg_sync_q), 3),
                 'avg_qoe': round(qoe, 3),
                 'gini': round(gini, 3),
                 'execution_time': round(self.execution_time, 3)
             }
-
+            # 'avg_latency_binary': round(mean(self.avg_latency_binary), 3),
+            # 'avg_jerkiness_binary': round(mean(self.avg_jerkiness_binary), 3),
+            # 'avg_sync_binary': round(mean(self.avg_sync_binary), 3),
             save_to_csv(self.file_results, data)
 
         # return ob, reward, self.episode_over, self.info
@@ -600,9 +602,9 @@ class NNESchedulingEnv(gym.Env):
                 latency = normalize(latency,  MIN_LATENCY + MIN_PROC,  MAX_LATENCY + MAX_PROC)
                 cost = normalize(cost, MIN_COST, MAX_COST)
                 #bandwidth = normalize(bandwidth, MIN_DL + MIN_UL, MAX_DL + MAX_UL)
-                qoe = normalize(qoe, 0, 15)
+                qoe = normalize(qoe,  MIN_QOE, MAX_QOE)
 
-                reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (1 - cost) + self.qoe_weight *  (1 - qoe)
+                reward = self.latency_weight * (1 - latency) + self.gini_weight * (1 - gini) + self.cost_weight * (1 - cost) + self.qoe_weight *  qoe
 
                 logging.info(
                     '[Multi Reward] Normalized: latency: {} | gini: {} | cost: {} | qoe: {}|'.format(latency, gini, cost, qoe))
@@ -611,7 +613,7 @@ class NNESchedulingEnv(gym.Env):
                         self.latency_weight * (1 - latency),
                         self.gini_weight * (1 - gini),
                         self.cost_weight * (1 - cost),
-                        self.qoe_weight * (1 - qoe)
+                        self.qoe_weight * (qoe)
                     ))
 
                 logging.info('[Multi Reward] Final reward: {}'.format(reward))

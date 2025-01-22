@@ -241,8 +241,8 @@ def save_to_csv(file_name, data):
         'avg_deployment_cost', 'avg_total_latency', 'avg_access_latency',
         'avg_proc_latency', 'avg_throuput_in', 'avg_packetsize_in',
         'avg_interarrival_in', 'avg_throuput_out', 'avg_packetsize_out',
-        'avg_interarrival_out', 'avg_latency_binary', 'avg_jerkiness_binary',
-        'avg_sync_binary', 'avg_qoe', 'gini', 'execution_time'
+        'avg_interarrival_out', 'avg_latency', 'avg_jerkiness',
+        'avg_sync', 'avg_qoe', 'gini', 'execution_time'
     ]
 
     # Check if file exists to determine if headers need to be written
@@ -287,11 +287,11 @@ def calculate_qoe(sync, jerkiness, latnecy, vrsq = 0):
         Returns:
             qoe (float): Calculated QoE value.
         """
-    # qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.) + (vrsq / 5.)
-    # return qoe / 3.
-    qoe = (sync / 5.0) + (jerkiness / 5.) + (latnecy / 5.)
+    qoe = sync  + jerkiness + latnecy + vrsq
+    # print("s : ", sync, "J : ", jerkiness, "L : ", latnecy)
+    # print("Q : ", qoe)
 
-    return qoe / 3.0
+    return qoe
 
 
 def simulate_model(dataframe, accuracy_rate, columns):
