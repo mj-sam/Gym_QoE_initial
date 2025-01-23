@@ -68,7 +68,7 @@ class NNESchedulingEnv(gym.Env):
         self.qoe_simulated_accuracy = qoe_simulated_accuracy
         # -------------------------------------------------------
         # ------------- observation configuration ----------------
-        self.feature_count = NUM_METRICS_NODES  # Base features
+        self.feature_count = NUM_METRICS_NODES + 1 # Base features
 
         if self.qoe_in_observation:
             self.feature_count  += 3  # Adding latency, jerkiness, sync
@@ -746,7 +746,8 @@ class NNESchedulingEnv(gym.Env):
             self.allocated_cpu,
             self.cpu_capacity,
             self.allocated_memory,
-            self.memory_capacity
+            self.memory_capacity,
+            self.processing_latency,
         ], axis=1)
 
         if self.qoe_in_observation:
