@@ -230,7 +230,7 @@ def main():
     if training:
         # Loop through configurations from CSV
         for _, config in config_data.iterrows():
-            obj_included = bool(config['objective_included'])
+            obj_included = bool(config['obj_included'])
             qoe_included = bool(config['qoe_included'])
             cost_weight = config['cost_weights']
             qoe_weight = config['qoe_weights']

@@ -5,7 +5,8 @@ from stable_baselines3.common.monitor import Monitor
 from tqdm import tqdm
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from envs.nne_scheduling_env import NNESchedulingEnv
-from envs.baselines import latency_greedy_policy, cost_greedy_policy, bandwidth_greedy_policy
+from envs.baselines import cost_greedy_policy, access_latency_greedy_policy, cpu_greedy_policy, \
+    throughput_greedy_policy, latency_greedy_policy
 
 MONITOR_PATH = "./results/greedy_monitor.csv"
 
@@ -19,20 +20,21 @@ NUM_NODES = 4
 LATENCY_WEIGHT = 0.0
 CPU_WEIGHT = 0.0
 GINI_WEIGHT = 0.0
-BANDWIDTH_WEIGHT = 1.0
+COST_WEIGHT = 1.0
 
 LATENCY_GREEDY = 'lat'
 COST_GREEDY = 'cost'
-BANDWIDTH_GREEDY = 'band'
+CPU_GREEDY = 'cpu'
+THROUGHPUT_GREEDY = 'throughput'
 
 if __name__ == "__main__":
-    policy = LATENCY_GREEDY
+    policy = CPU_GREEDY
     num_nodes = [4]  # 12, 16, 24, 32, 48, 64, 80, 128, 150, 180]
     n_episodes = 100
-    path = "data/train/v2-jan-feb/nodes/"
+    path = "mydata/"
 
     factors = [1, 2, 4, 6, 8, 10, 12]
-    TEST_FACTORS = True
+    TEST_FACTORS = False
 
     i = 0
     for n in num_nodes:
@@ -65,12 +67,14 @@ if __name__ == "__main__":
                     return_ = 0.0
                     done = False
                     while not done:
-                        if policy == LATENCY_GREEDY:
-                            action = latency_greedy_policy(env, action_mask)
-                        elif policy == COST_GREEDY:
+                        if policy == COST_GREEDY:
                             action = cost_greedy_policy(env, action_mask)
-                        elif policy == BANDWIDTH_GREEDY:
-                            action = bandwidth_greedy_policy(env, action_mask)
+                        elif policy == THROUGHPUT_GREEDY:
+                            action = throughput_greedy_policy(env, action_mask)
+                        elif policy == CPU_GREEDY:
+                            action = cpu_greedy_policy(env, action_mask)
+                        elif policy == LATENCY_GREEDY:
+                            action = latency_greedy_policy(env, action_mask, env.deployment_request.latency_threshold)
                         else:
                             print("unrecognized policy!")
 
@@ -106,12 +110,14 @@ if __name__ == "__main__":
                 return_ = 0.0
                 done = False
                 while not done:
-                    if policy == LATENCY_GREEDY:
-                        action = latency_greedy_policy(env, action_mask)
-                    elif policy == COST_GREEDY:
+                    if policy == COST_GREEDY:
                         action = cost_greedy_policy(env, action_mask)
-                    elif policy == BANDWIDTH_GREEDY:
-                        action = bandwidth_greedy_policy(env, action_mask)
+                    elif policy == THROUGHPUT_GREEDY:
+                        action = throughput_greedy_policy(env, action_mask)
+                    elif policy == CPU_GREEDY:
+                        action = cpu_greedy_policy(env, action_mask)
+                    elif policy == LATENCY_GREEDY:
+                        action = latency_greedy_policy(env, action_mask, env.deployment_request.latency_threshold)
                     else:
                         print("unrecognized policy!")
 

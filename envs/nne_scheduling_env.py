@@ -78,7 +78,8 @@ class NNESchedulingEnv(gym.Env):
 
         #-------------------------------------------------------
         #------------- simulation configuration ----------------
-        self.file_df = pd.read_csv("./mydata/simulation.csv")
+        #self.file_df = pd.read_csv("./mydata/simulation.csv")
+        self.file_df = pd.read_csv("./mydata/simulation_balanced.csv")
         if self.qoe_simulation_mode == "Simulation":
             self.file_df = simulate_model(self.file_df, self.qoe_simulated_accuracy, columns = [DF_COLUMN_LATENCY, DF_COLUMN_JERKINESS, DF_COLUMN_SYNC])
         elif self.qoe_simulation_mode == "Real":
