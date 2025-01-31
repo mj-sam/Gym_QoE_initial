@@ -232,12 +232,12 @@ def main():
         for _, config in config_data.iterrows():
             obj_included = bool(config['obj_included'])
             qoe_included = bool(config['qoe_included'])
-            cost_weight = config['cost_weights']
-            qoe_weight = config['qoe_weights']
-            qoe_simulation_mode = config['qoe_simulation_modes']
-            qoe_accuracy = config['qoe_accuracies']
-            latency_weight = config['latency_weights']
-            gini_weight = config['gini_weights']
+            cost_weight = config['cost_weight']
+            qoe_weight = config['qoe_weight']
+            qoe_simulation_mode = config['qoe_simulation_mode']
+            qoe_accuracy = config['qoe_accuracy']
+            latency_weight = config['latency_weight']
+            gini_weight = config['gini_weight']
 
             # Create a dynamic name for each configuration
             name = f"{alg}_env_{env_name}_qoe_{qoe_included}_obj_{obj_included}_cw_{cost_weight}_qw_{qoe_weight}_lw_{latency_weight}_gw_{gini_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}"

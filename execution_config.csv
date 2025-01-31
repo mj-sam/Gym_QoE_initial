@@ -1,4 +1,4 @@
-objective_included,qoe_included,qoe_simulation_modes,qoe_accuracies,latency_weights,gini_weights,cost_weights,qoe_weights
+obj_included,qoe_included,qoe_simulation_mode,qoe_accuracy,latency_weight,gini_weight,cost_weight,qoe_weight
 1,1,Simulation,0.9,0,0,0,1
 1,1,Simulation,0.9,0,0,1,0
 1,1,Simulation,0.9,1,0,0,0

@@ -71,7 +71,7 @@ class NNESchedulingEnv(gym.Env):
         self.feature_count = NUM_METRICS_NODES + 1 # Base features
 
         if self.qoe_in_observation:
-            self.feature_count  += 3  # Adding latency, jerkiness, sync
+            self.feature_count  += 1  # Adding latency, jerkiness, sync
 
         if self.objective_feature_in_observation:
             self.feature_count  += 4  # Adding throughput, packet size, interarrival times
@@ -290,7 +290,7 @@ class NNESchedulingEnv(gym.Env):
         #np.random.shuffle(order)
 
         for n in range(self.num_nodes):
-            config_random = np.random.randint(0, 3, dtype=int) # for server type A B C D
+            config_random = np.random.randint(0, 4, dtype=int) # for server type A B C D
             #print(config_random)
             S = self.file_df[self.file_df['Config'] == SERVER_TYPES[config_random]]
             self.server_type_id[n] = config_random
@@ -753,9 +753,7 @@ class NNESchedulingEnv(gym.Env):
 
         if self.qoe_in_observation:
             qoe_observation = np.stack([
-                self.latency_binary,
-                self.jerkiness_binary,
-                self.sync_binary
+                self.latency_binary + self.jerkiness_binary + self.sync_binary
             ], axis=1)
             base_observation = np.concatenate([base_observation, qoe_observation], axis=1)
 
@@ -986,9 +984,21 @@ class NNESchedulingEnv(gym.Env):
                 self.interarrival_out[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_INTERARRIVALTIME_UL]
 
                 # simulation for if have the actual labels : QOE MODEL
-                self.latency_binary[j]= self.df_node_selected_rows[j].at[step, DF_COLUMN_LATENCY_BINARY]
-                self.jerkiness_binary[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_JERKINESS_BINARY]
-                self.sync_binary[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_SYNC_BINARY]
+                # self.latency_binary[j]= self.df_node_selected_rows[j].at[step, DF_COLUMN_LATENCY_BINARY]
+                # self.jerkiness_binary[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_JERKINESS_BINARY]
+                # self.sync_binary[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_SYNC_BINARY]
+                self.latency_binary[j] = ((self.current_step * self.latency_binary[j]) +
+                                          self.df_node_selected_rows[j].at[
+                                              step, DF_COLUMN_LATENCY_BINARY]) / (self.current_step + 1)
+
+                self.jerkiness_binary[j] = ((self.current_step * self.jerkiness_binary[j]) +
+                                            self.df_node_selected_rows[j].at[
+                                                step, DF_COLUMN_JERKINESS_BINARY]) / (self.current_step + 1)
+
+                self.sync_binary[j] = ((self.current_step * self.sync_binary[j]) +
+                                       self.df_node_selected_rows[j].at[
+                                           step, DF_COLUMN_SYNC_BINARY]) / (self.current_step + 1)
+                #print("SYNC : ", self.sync_binary[j])
 
                 # variable for the actual reported value
                 self.latency_q[j] = self.df_node_selected_rows[j].at[step, DF_COLUMN_LATENCY]
