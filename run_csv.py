@@ -239,6 +239,10 @@ def main():
             latency_weight = config['latency_weight']
             gini_weight = config['gini_weight']
 
+            if(obj_included or qoe_included):
+                continue
+            print(config)
+
             # Create a dynamic name for each configuration
             name = f"{alg}_env_{env_name}_qoe_{qoe_included}_obj_{obj_included}_cw_{cost_weight}_qw_{qoe_weight}_lw_{latency_weight}_gw_{gini_weight}_sim_{qoe_simulation_mode}_acc_{qoe_accuracy}"
 
