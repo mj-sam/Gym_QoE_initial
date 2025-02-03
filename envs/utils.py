@@ -53,25 +53,25 @@ def get_c2e_deployment_list():
                           cpu_request=0.2, cpu_limit=1.0,
                           memory_request=0.3, memory_limit=0.5,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=50),
         # 2 adapter-http
         DeploymentRequest(name="adapter-http",
                           cpu_request=0.2, cpu_limit=1.0,
                           memory_request=0.3, memory_limit=0.5,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=150),
         # 3 adapter-mqtt
         DeploymentRequest(name="adapter-mqtt",
                           cpu_request=0.2, cpu_limit=1.0,
                           memory_request=0.3, memory_limit=0.5,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=20),
         # 4 adapter-mqtt
         DeploymentRequest(name="artemis",
                           cpu_request=0.2, cpu_limit=1.0,
                           memory_request=0.6, memory_limit=0.6,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=40),
 
         # 5 dispatch-router
         DeploymentRequest(name="dispatch-router",
@@ -85,21 +85,21 @@ def get_c2e_deployment_list():
                           cpu_request=0.2, cpu_limit=2.0,
                           memory_request=0.7, memory_limit=1.0,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=100),
+                          latency_threshold=50),
 
         # 7 ditto-gateway
         DeploymentRequest(name="ditto-gateway",
                           cpu_request=0.2, cpu_limit=2.0,
                           memory_request=0.5, memory_limit=0.7,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=100),
+                          latency_threshold=45),
 
         # 8 ditto-nginx
         DeploymentRequest(name="ditto-nginx",
                           cpu_request=0.05, cpu_limit=0.15,
                           memory_request=0.016, memory_limit=0.032,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=100),
+                          latency_threshold=60),
 
         # 9 ditto-policies
         DeploymentRequest(name="ditto-policies",
@@ -113,51 +113,164 @@ def get_c2e_deployment_list():
                           cpu_request=0.05, cpu_limit=0.1,
                           memory_request=0.016, memory_limit=0.032,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=400),
+                          latency_threshold=35),
 
         # 11 ditto-things
         DeploymentRequest(name="ditto-things",
                           cpu_request=0.2, cpu_limit=2.0,
                           memory_request=0.5, memory_limit=0.7,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=20),
 
         # 12 ditto-things-search
         DeploymentRequest(name="ditto-things-search",
                           cpu_request=0.2, cpu_limit=2.0,
                           memory_request=0.5, memory_limit=0.7,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=20),
 
         # 13 ditto-mongo-db
         DeploymentRequest(name="ditto-mongo-db",
                           cpu_request=0.2, cpu_limit=2.0,
                           memory_request=0.5, memory_limit=0.7,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=40),
 
         # 14 service-auth
         DeploymentRequest(name="service-auth",
                           cpu_request=0.2, cpu_limit=1.0,
                           memory_request=0.2, memory_limit=0.25,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=300),
+                          latency_threshold=35),
 
         # 15 service-command-router
         DeploymentRequest(name="service-command-router",
                           cpu_request=0.15, cpu_limit=1.0,
                           memory_request=0.2, memory_limit=0.5,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=300),
+                          latency_threshold=40),
 
         # 16 service-device-registry
         DeploymentRequest(name="service-device-registry",
                           cpu_request=0.2, cpu_limit=1.0,
                           memory_request=0.4, memory_limit=0.4,
                           arrival_time=0, departure_time=0,
-                          latency_threshold=200),
+                          latency_threshold=20),
     ]
     return deployment_list
+
+# def get_c2e_deployment_list():
+#     deployment_list = [
+#         # 1 adapter-amqp
+#         DeploymentRequest(name="adapter-amqp",
+#                           cpu_request=0.2, cpu_limit=1.0,
+#                           memory_request=0.3, memory_limit=0.5,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#         # 2 adapter-http
+#         DeploymentRequest(name="adapter-http",
+#                           cpu_request=0.2, cpu_limit=1.0,
+#                           memory_request=0.3, memory_limit=0.5,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#         # 3 adapter-mqtt
+#         DeploymentRequest(name="adapter-mqtt",
+#                           cpu_request=0.2, cpu_limit=1.0,
+#                           memory_request=0.3, memory_limit=0.5,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#         # 4 adapter-mqtt
+#         DeploymentRequest(name="artemis",
+#                           cpu_request=0.2, cpu_limit=1.0,
+#                           memory_request=0.6, memory_limit=0.6,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#
+#         # 5 dispatch-router
+#         DeploymentRequest(name="dispatch-router",
+#                           cpu_request=0.2, cpu_limit=1.0,
+#                           memory_request=0.06, memory_limit=0.25,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#
+#         # 6 ditto-connectivity
+#         DeploymentRequest(name="ditto-connectivity",
+#                           cpu_request=0.2, cpu_limit=2.0,
+#                           memory_request=0.7, memory_limit=1.0,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=100),
+#
+#         # 7 ditto-gateway
+#         DeploymentRequest(name="ditto-gateway",
+#                           cpu_request=0.2, cpu_limit=2.0,
+#                           memory_request=0.5, memory_limit=0.7,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=100),
+#
+#         # 8 ditto-nginx
+#         DeploymentRequest(name="ditto-nginx",
+#                           cpu_request=0.05, cpu_limit=0.15,
+#                           memory_request=0.016, memory_limit=0.032,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=100),
+#
+#         # 9 ditto-policies
+#         DeploymentRequest(name="ditto-policies",
+#                           cpu_request=0.2, cpu_limit=2.0,
+#                           memory_request=0.5, memory_limit=0.7,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=100),
+#
+#         # 10 ditto-swagger-ui
+#         DeploymentRequest(name="ditto-swagger-ui",
+#                           cpu_request=0.05, cpu_limit=0.1,
+#                           memory_request=0.016, memory_limit=0.032,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=400),
+#
+#         # 11 ditto-things
+#         DeploymentRequest(name="ditto-things",
+#                           cpu_request=0.2, cpu_limit=2.0,
+#                           memory_request=0.5, memory_limit=0.7,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#
+#         # 12 ditto-things-search
+#         DeploymentRequest(name="ditto-things-search",
+#                           cpu_request=0.2, cpu_limit=2.0,
+#                           memory_request=0.5, memory_limit=0.7,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#
+#         # 13 ditto-mongo-db
+#         DeploymentRequest(name="ditto-mongo-db",
+#                           cpu_request=0.2, cpu_limit=2.0,
+#                           memory_request=0.5, memory_limit=0.7,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#
+#         # 14 service-auth
+#         DeploymentRequest(name="service-auth",
+#                           cpu_request=0.2, cpu_limit=1.0,
+#                           memory_request=0.2, memory_limit=0.25,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=300),
+#
+#         # 15 service-command-router
+#         DeploymentRequest(name="service-command-router",
+#                           cpu_request=0.15, cpu_limit=1.0,
+#                           memory_request=0.2, memory_limit=0.5,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=300),
+#
+#         # 16 service-device-registry
+#         DeploymentRequest(name="service-device-registry",
+#                           cpu_request=0.2, cpu_limit=1.0,
+#                           memory_request=0.4, memory_limit=0.4,
+#                           arrival_time=0, departure_time=0,
+#                           latency_threshold=200),
+#     ]
+#     return deployment_list
 
 
 # TODO: modify function
